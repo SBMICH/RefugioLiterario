@@ -1,0 +1,70 @@
+{% include 'header.html' %}
+<main id="centered-container">
+    <h1>Catálogo de Libros</h1>
+
+    <!-- Mostrar mensajes de flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul class="flash-messages" role="alert" aria-live="polite">
+                {% for category, message in messages %}
+                    <li class="{{ category }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+
+    <div class="table-responsive">
+        <table aria-label="Catálogo de libros">
+            <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Título</th>
+                    <th scope="col">Autor</th>
+                    <th scope="col">Género</th>
+                    <th scope="col">Año de Publicación</th>
+                    <th scope="col">Descripción</th>
+                    <th scope="col">Precio</th>
+                    {% if session['is_admin'] %}
+                    <th scope="col">Acciones</th>
+                    {% else %}
+                    <th scope="col"> </th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for libro in libros %}
+                <tr>
+                    <td data-label="#">{{ loop.index + (page_num - 1) * 10 }}</td>
+                    <td data-label="Título">{{ libro[1] }}</td>
+                    <td data-label="Autor">{{ libro[2] }}</td>
+                    <td data-label="Género">{{ libro[3] }}</td>
+                    <td data-label="Año de Publicación">{{ libro[4] }}</td>
+                    <td data-label="Descripción">{{ libro[5] }}</td>
+                    <td data-label="Precio">{{ libro[6] }}</td>
+                    {% if session['is_admin'] %}
+                    <td data-label="Acciones">
+                        <a href="{{ url_for('editar_libro', libro_id=libro[0]) }}" class="button button-edit">Editar</a>
+                        <form action="{{ url_for('eliminar_libro', libro_id=libro[0]) }}" method="post" class="inline-form">
+                            <button type="submit" class="button button-delete" onclick="return confirm('¿Estás seguro de que deseas eliminar este libro?');">Eliminar</button>
+                        </form>
+                    </td>
+                    {% else %}
+                    <td data-label="Agregar al Carrito">
+                        <form action="{{ url_for('agregar_carrito', libro_id=libro[0]) }}" method="post" class="inline-form">
+                            <button type="submit" class="button button-add">Agregar al Carrito</button>
+                        </form>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <nav class="pagination" aria-label="Paginación del catálogo">
+        {% for page in range(1, total_paginas + 1) %}
+        <a href="{{ url_for('catalogo', page_num=page) }}" {% if page == page_num %}aria-current="page"{% endif %}>{{ page }}</a>
+        {% endfor %}
+    </nav>
+</main>
+{% include 'footer.html' %}

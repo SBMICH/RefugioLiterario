@@ -1,0 +1,35 @@
+{% include 'header.html' %}
+<main class="container">
+    <h2>Usuarios Registrados</h2>
+
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre de Usuario</th>
+                    <th>Email</th>
+                    <th>Administrador</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for usuario in usuarios %}
+                <tr>
+                    <td data-label="ID">{{ usuario[0] }}</td>
+                    <td data-label="Nombre de Usuario">{{ usuario[1] }}</td>
+                    <td data-label="Email">{{ usuario[2] }}</td>
+                    <td data-label="Administrador">{{ 'Sí' if usuario[4] else 'No' }}</td>
+                    <td data-label="Acciones">
+                        <a href="{{ url_for('editar_usuario', user_id=usuario[0]) }}" class="button button-edit">Editar</a>
+                        <form action="{{ url_for('eliminar_usuario', user_id=usuario[0]) }}" method="post" class="inline-form" onsubmit="return confirm('¿Seguro que deseas eliminar este usuario?');">
+                            <button type="submit" class="button button-delete">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</main>
+{% include 'footer.html' %}

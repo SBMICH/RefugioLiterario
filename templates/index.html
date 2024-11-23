@@ -1,0 +1,165 @@
+{% include 'header.html' %}
+<main>
+    <section class="hero">
+        <h2>Bienvenidos a la Refugio Literario</h2>
+        <p>Explora una amplia variedad de libros y descubre tus próximas lecturas favoritas en un mundo de conocimiento y aventura.</p>
+        <a href="{{ url_for('catalogo') }}" class="cta-button">Explorar Catálogo</a>
+    </section>
+
+    <section class="features">
+        <div class="feature">
+            <div class="feature-icon">📚</div>
+            <h3>Miles de Títulos</h3>
+            <p>Accede a una extensa colección de libros de todos los géneros y para todas las edades.</p>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">🔍</div>
+            <h3>Búsqueda Avanzada</h3>
+            <p>Encuentra fácilmente el libro que buscas con nuestro sistema de búsqueda inteligente.</p>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">📱</div>
+            <h3>Lectura en Línea</h3>
+            <p>Disfruta de tus libros favoritos en cualquier dispositivo, en cualquier momento.</p>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">🌟</div>
+            <h3>Recomendaciones Personalizadas</h3>
+            <p>Descubre nuevos libros basados en tus gustos y preferencias de lectura.</p>
+        </div>
+    </section>
+
+    <section class="about-us">
+        <div class="about-us-header">
+            <h2>Sobre Nosotros</h2>
+            <p class="about-us-tagline">Más que una biblioteca, somos una comunidad de amantes de la lectura</p>
+        </div>
+        
+        <div class="about-us-grid">
+            <div class="about-us-story">
+                <h3>Nuestra Historia</h3>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <span class="year">2010</span>
+                        <p>Fundación de la Refugio Literario con la misión de hacer la literatura accesible a todos.</p>
+                    </div>
+                    <div class="timeline-item">
+                        <span class="year">2015</span>
+                        <p>Expansión digital y lanzamiento de nuestra plataforma de lectura en línea.</p>
+                    </div>
+                    <div class="timeline-item">
+                        <span class="year">2020</span>
+                        <p>Alcanzamos más de 100,000 lectores activos y 50,000 títulos en nuestra colección.</p>
+                    </div>
+                    <div class="timeline-item">
+                        <span class="year">2023</span>
+                        <p>Inauguración de nuestro programa de clubes de lectura virtuales y presenciales.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="about-us-team">
+                <h3>Nuestro Equipo</h3>
+                <div class="team-grid">
+                    <div class="team-member">
+                        <img src="{{ url_for('static', filename='images/team/director.jpg') }}" alt="Director de la Biblioteca">
+                        <h4>Carlos Ruiz</h4>
+                        <p>Director</p>
+                    </div>
+                    <div class="team-member">
+                        <img src="{{ url_for('static', filename='images/team/bibliotecaria.jpg') }}" alt="Bibliotecaria Principal">
+                        <h4>Ana García</h4>
+                        <p>Bibliotecaria Principal</p>
+                    </div>
+                    <div class="team-member">
+                        <img src="{{ url_for('static', filename='images/team/eventos.jpg') }}" alt="Coordinadora de Eventos">
+                        <h4>Laura Martínez</h4>
+                        <p>Coordinadora de Eventos</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="about-us-values">
+            <h3>Nuestros Valores</h3>
+            <div class="values-grid">
+                <div class="value-item">
+                    <div class="value-icon">🎯</div>
+                    <h4>Accesibilidad</h4>
+                    <p>Creemos que la literatura debe estar al alcance de todos.</p>
+                </div>
+                <div class="value-item">
+                    <div class="value-icon">🤝</div>
+                    <h4>Comunidad</h4>
+                    <p>Fomentamos un espacio de intercambio y crecimiento mutuo.</p>
+                </div>
+                <div class="value-item">
+                    <div class="value-icon">💡</div>
+                    <h4>Innovación</h4>
+                    <p>Buscamos constantemente nuevas formas de mejorar la experiencia de lectura.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="events">
+        <h2>Próximos Eventos</h2>
+        <div class="events-grid">
+            <div class="event-card">
+                <div class="event-date">
+                    <span class="day">15</span>
+                    <span class="month">NOV</span>
+                </div>
+                <div class="event-content">
+                    <h3>Club de Lectura: "Cien años de soledad"</h3>
+                    <p>Únete a nuestra discusión mensual sobre esta obra maestra de Gabriel García Márquez.</p>
+                    <a href="#" class="event-link">Más información</a>
+                </div>
+            </div>
+            <div class="event-card">
+                <div class="event-date">
+                    <span class="day">20</span>
+                    <span class="month">NOV</span>
+                </div>
+                <div class="event-content">
+                    <h3>Taller de Escritura Creativa</h3>
+                    <p>Aprende técnicas de escritura creativa con nuestra escritora residente.</p>
+                    <a href="#" class="event-link">Más información</a>
+                </div>
+            </div>
+            <div class="event-card">
+                <div class="event-date">
+                    <span class="day">25</span>
+                    <span class="month">NOV</span>
+                </div>
+                <div class="event-content">
+                    <h3>Encuentro con Autor</h3>
+                    <p>Charla y firma de libros con reconocidos autores contemporáneos.</p>
+                    <a href="#" class="event-link">Más información</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="statistics">
+        <div class="stat-container">
+            <div class="stat-item">
+                <span class="stat-number">50,000+</span>
+                <span class="stat-label">Libros Disponibles</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">100,000+</span>
+                <span class="stat-label">Lectores Activos</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">1,000+</span>
+                <span class="stat-label">Eventos Realizados</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">24/7</span>
+                <span class="stat-label">Acceso Digital</span>
+            </div>
+        </div>
+    </section>
+</main>
+{% include 'footer.html' %}

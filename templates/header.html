@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Refugio Literario - Tu portal al conocimiento</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-container">
+            <h1 class="site-title">
+                <a href="{{ url_for('index') }}">
+                    <span class="title-first">Refugio</span>
+                    <span class="title-second">Literario</span>
+                </a>
+            </h1>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="{{ url_for('catalogo') }}">Catálogo</a></li>
+                    {% if 'loggedin' in session %}
+                        <li><a href="{{ url_for('ver_carrito') }}">Carrito</a></li>
+                        <li><a href="{{ url_for('usuario') }}">Mi Cuenta</a></li>
+                    {% else %}
+                        <li><a href="{{ url_for('login') }}">Iniciar sesión</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </header>

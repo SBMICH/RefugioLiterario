@@ -1,0 +1,125 @@
+{% include 'header.html' %}
+<main class="container">
+    <h1>Confirmación de Compra</h1>
+    
+    <div class="card purchase-summary">
+        <h2>Resumen de la Compra</h2>
+        <div class="table-responsive">
+            <table aria-label="Resumen de libros a comprar">
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Autor</th>
+                        <th>Precio</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for libro in libros %}
+                    <tr>
+                        <td data-label="Título">{{ libro[1] }}</td>
+                        <td data-label="Autor">{{ libro[2] }}</td>
+                        <td data-label="Precio">${{ libro[3] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <h3 class="total-price">Precio Total: <span>${{ total_precio }}</span></h3>
+    </div>
+
+    <form action="{{ url_for('finalizar_compra') }}" method="post" class="card purchase-form">
+        <h2>Datos de Envío</h2>
+        <div class="form-group">
+            <label for="nombre">Nombre Completo:</label>
+            <input type="text" id="nombre" name="nombre" required>
+        </div>
+        <div class="form-group">
+            <label for="email">Correo Electrónico:</label>
+            <input type="email" id="email" name="email" required>
+        </div>
+        <div class="form-group">
+            <label for="direccion">Dirección de Envío:</label>
+            <input type="text" id="direccion" name="direccion" required>
+        </div>
+        <div class="form-group">
+            <label for="ciudad">Ciudad:</label>
+            <input type="text" id="ciudad" name="ciudad" required>
+        </div>
+        <div class="form-group">
+            <label for="codigo_postal">Código Postal:</label>
+            <input type="text" id="codigo_postal" name="codigo_postal" required>
+        </div>
+
+        <h2>Método de Pago</h2>
+        <div class="form-group">
+            <label for="metodo_pago">Seleccione un método de pago:</label>
+            <select name="metodo_pago" id="metodo_pago" required>
+                <option value="">Seleccione una opción</option>
+                <option value="tarjeta_credito">Tarjeta de Crédito</option>
+                <option value="paypal">PayPal</option>
+                <option value="transferencia">Transferencia Bancaria</option>
+            </select>
+        </div>
+
+        <div id="tarjeta_credito_fields" style="display: none;">
+            <div class="form-group">
+                <label for="numero_tarjeta">Número de Tarjeta:</label>
+                <input type="text" id="numero_tarjeta" name="numero_tarjeta">
+            </div>
+            <div class="form-group">
+                <label for="fecha_vencimiento">Fecha de Vencimiento:</label>
+                <input type="text" id="fecha_vencimiento" name="fecha_vencimiento" placeholder="MM/AA">
+            </div>
+            <div class="form-group">
+                <label for="cvv">CVV:</label>
+                <input type="text" id="cvv" name="cvv">
+            </div>
+        </div>
+
+        <div id="paypal_fields" style="display: none;">
+            <div class="form-group">
+                <label for="paypal_email">Correo Electrónico de PayPal:</label>
+                <input type="email" id="paypal_email" name="paypal_email">
+            </div>
+        </div>
+
+        <div id="transferencia_fields" style="display: none;">
+            <div class="form-group">
+                <label for="banco">Banco:</label>
+                <input type="text" id="banco" name="banco">
+            </div>
+            <div class="form-group">
+                <label for="titular_cuenta">Titular de la Cuenta:</label>
+                <input type="text" id="titular_cuenta" name="titular_cuenta">
+            </div>
+            <div class="form-group">
+                <label for="numero_cuenta">Número de Cuenta:</label>
+                <input type="text" id="numero_cuenta" name="numero_cuenta">
+            </div>
+        </div>
+
+        <button type="submit" class="button button-add" onclick="return confirm('¿Estás seguro de que deseas confirmar esta compra?');">Confirmar Compra</button>
+    </form>
+</main>
+{% include 'footer.html' %}
+
+<script>
+document.getElementById('metodo_pago').addEventListener('change', function() {
+    var tarjetaFields = document.getElementById('tarjeta_credito_fields');
+    var paypalFields = document.getElementById('paypal_fields');
+    var transferenciaFields = document.getElementById('transferencia_fields');
+    
+    tarjetaFields.style.display = 'none';
+    paypalFields.style.display = 'none';
+    transferenciaFields.style.display = 'none';
+    
+    if (this.value === 'tarjeta_credito') {
+        tarjetaFields.style.display = 'block';
+    } else if (this.value === 'paypal') {
+        paypalFields.style.display = 'block';
+    } else if (this.value === 'transferencia') {
+        transferenciaFields.style.display = 'block';
+    }
+});
+</script>

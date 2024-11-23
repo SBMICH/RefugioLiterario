@@ -1,0 +1,44 @@
+{% include 'header.html' %}
+<main class="container">
+    <h1>Carrito de Compras</h1>
+    
+    {% if libros %}
+    <div class="table-responsive">
+        <table class="table" aria-label="Libros en el carrito">
+            <thead>
+                <tr>
+                    <th scope="col">Título</th>
+                    <th scope="col">Autor</th>
+                    <th scope="col">Precio</th>
+                    <th scope="col">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for libro in libros %}
+                <tr>
+                    <td data-label="Título">{{ libro[1] }}</td>
+                    <td data-label="Autor">{{ libro[2] }}</td>
+                    <td data-label="Precio">${{ libro[3] }}</td>
+                    <td data-label="Acciones">
+                        <form action="{{ url_for('eliminar_carrito', carrito_id=libro[0]) }}" method="post" class="inline-form">
+                            <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="cart-summary">
+        <h3>Resumen del Carrito</h3>
+        <p class="total-price">Precio Total: <span>${{ total_precio }}</span></p>
+        <form action="{{ url_for('finalizar_compra') }}" method="get" class="checkout-form">
+            <button type="submit" class="btn btn-primary" onclick="return confirm('¿Estás seguro de que deseas finalizar la compra?');">Finalizar Compra</button>
+        </form>
+    </div>
+    {% else %}
+    <p class="empty-cart-message">Tu carrito está vacío. <a href="{{ url_for('catalogo') }}">Explora nuestro catálogo</a> para agregar libros.</p>
+    {% endif %}
+</main>
+{% include 'footer.html' %}

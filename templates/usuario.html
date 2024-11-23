@@ -1,0 +1,92 @@
+{% include 'header.html' %}
+<main class="container user-profile">
+    <div class="profile-header">
+        <h1>Perfil de Usuario</h1>
+        <nav class="profile-nav">
+            <ul>
+                <li><a href="{{ url_for('catalogo') }}" class="button button-add">Ver Catálogo</a></li>
+                {% if session.is_admin %}
+                    <li><a href="{{ url_for('agregar_libro') }}" class="button button-edit">Agregar Libro</a></li>
+                    <li><a href="{{ url_for('ver_usuarios') }}" class="button button-edit">Ver Usuarios</a></li>
+                {% endif %}
+                <li>
+                    <form action="{{ url_for('confirmar_logout') }}" method="post" class="inline-form">
+                        <button type="submit" class="button button-delete">Cerrar Sesión</button>
+                    </form>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <div class="profile-content">
+        <section class="profile-info">
+            <h2>Información Personal</h2>
+            <div class="card" id="perfil-info">
+                <div class="profile-details">
+                    <p><strong>Nombre de Usuario:</strong> <span id="current-username">{{ username }}</span></p>
+                    <p><strong>Correo Electrónico:</strong> <span id="current-email">{{ email }}</span></p>
+                </div>
+                <button id="edit-button" class="button button-edit" onclick="toggleEdit()">Editar Perfil</button>
+            </div>
+
+            <div id="edit-form" class="card" style="display: none;">
+                <h3>Editar Perfil</h3>
+                <form action="{{ url_for('editar_perfil') }}" method="post">
+                    <div class="form-group">
+                        <label for="username">Nombre de Usuario:</label>
+                        <input type="text" id="username" name="username" value="{{ username }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Correo Electrónico:</label>
+                        <input type="email" id="email" name="email" value="{{ email }}" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="button button-add">Guardar Cambios</button>
+                        <button type="button" class="button button-delete" onclick="toggleEdit()">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <section class="purchased-books">
+            <h2>Libros Comprados</h2>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Título</th>
+                            <th>Autor</th>
+                            <th>Precio</th>
+                            <th>Fecha de Compra</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for libro in libros_comprados %}
+                        <tr>
+                            <td data-label="Título">{{ libro[0] }}</td>
+                            <td data-label="Autor">{{ libro[1] }}</td>
+                            <td data-label="Precio">${{ libro[2] }}</td>
+                            <td data-label="Fecha de Compra">{{ libro[3] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</main>
+{% include 'footer.html' %}
+
+<script>
+function toggleEdit() {
+    var perfilInfo = document.getElementById('perfil-info');
+    var editForm = document.getElementById('edit-form');
+    if (perfilInfo.style.display === 'none') {
+        perfilInfo.style.display = 'block';
+        editForm.style.display = 'none';
+    } else {
+        perfilInfo.style.display = 'none';
+        editForm.style.display = 'block';
+    }
+}
+</script>

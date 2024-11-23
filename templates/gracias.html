@@ -1,0 +1,15 @@
+{% include 'header.html' %}
+<main class="container">
+    <div class="card">
+        <h1>¡Gracias por tu compra!</h1>
+        <div class="purchase-summary">
+            <p class="total-price">Tu compra ha sido registrada exitosamente.</p>
+            <p>¡Esperamos que disfrutes de tu libro!</p>
+        </div>
+        <div class="form-actions">
+            <a href="{{ url_for('catalogo') }}" class="button button-add">Volver al Catálogo</a>
+            <a href="{{ url_for('usuario') }}" class="button button-edit">Ver Mi Perfil</a>
+        </div>
+    </div>
+</main>
+{% include 'footer.html' %}
