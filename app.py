@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g
+from flask_wtf.csrf import CSRFProtect, CSRFError
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import os
@@ -86,21 +87,21 @@ def init_db_command():
     init_db()
     print('Base de datos creada en', DATABASE)
 
-# Protección CSRF: cada formulario POST debe enviar el token de la sesión
-def csrf_token():
-    if '_csrf_token' not in session:
-        session['_csrf_token'] = secrets.token_hex(32)
-    return session['_csrf_token']
+# Protección CSRF: cada formulario POST debe enviar el campo csrf_token
+app.config['WTF_CSRF_TIME_LIMIT'] = None  # el token dura lo que dure la sesión
+csrf = CSRFProtect(app)
 
-app.jinja_env.globals['csrf_token'] = csrf_token
+@app.errorhandler(CSRFError)
+def csrf_invalido(error):
+    flash('La sesión expiró, vuelve a intentarlo.')
+    return redirect(request.referrer or url_for('index'))
 
-@app.before_request
-def verificar_csrf():
-    if request.method == 'POST':
-        token = request.form.get('csrf_token', '')
-        if not secrets.compare_digest(token, session.get('_csrf_token', '')):
-            flash('La sesión expiró, vuelve a intentarlo.')
-            return redirect(request.referrer or url_for('index'))
+def email_valido(email):
+    """Validación simple de correo (sin expresiones regulares costosas)."""
+    if not email or len(email) > 254 or any(c.isspace() for c in email) or email.count('@') != 1:
+        return False
+    usuario, dominio = email.split('@')
+    return bool(usuario) and '.' in dominio and not dominio.startswith('.') and not dominio.endswith('.')
 
 # Filtros para mostrar precios y fechas
 @app.template_filter('precio')
@@ -187,7 +188,7 @@ def registro():
 
         if cuenta:
             flash('¡El usuario ya existe!')
-        elif not re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', email):
+        elif not email_valido(email):
             flash('Correo electrónico inválido')
         elif not re.fullmatch(r'[A-Za-z0-9]{3,30}', username):
             flash('El nombre de usuario debe tener entre 3 y 30 caracteres alfanuméricos')
@@ -539,7 +540,7 @@ def editar_perfil():
         if not nuevo_username or not re.fullmatch(r'[A-Za-z0-9]{3,30}', nuevo_username):
             flash('El nombre de usuario debe tener entre 3 y 30 caracteres alfanuméricos')
             return redirect(url_for('usuario'))
-        if not nuevo_email or not re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', nuevo_email):
+        if not email_valido(nuevo_email):
             flash('Correo electrónico inválido')
             return redirect(url_for('usuario'))
 

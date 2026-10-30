@@ -11,7 +11,7 @@ Usuarios de prueba que crea (rol lector):
     sofia / sofia12345
 """
 import os
-import random
+import secrets
 import sqlite3
 import sys
 from datetime import datetime, timedelta
@@ -121,6 +121,9 @@ COMENTARIOS = {
 }
 
 
+azar = secrets.SystemRandom()
+
+
 def main():
     db = sqlite3.connect(DATABASE, detect_types=sqlite3.PARSE_DECLTYPES)
     db.execute('PRAGMA foreign_keys = ON')
@@ -145,21 +148,20 @@ def main():
             nuevos_usuarios.append(username)
 
     # Compras y reseñas de ejemplo para los usuarios nuevos (así hay "más vendidos")
-    random.seed(7)
     libro_ids = [r[0] for r in db.execute('SELECT id FROM catalogo')]
-    populares = random.sample(libro_ids, 12)
+    populares = azar.sample(libro_ids, 12)
     compras = resenas = 0
     for username in nuevos_usuarios:
         user_id = db.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone()[0]
-        elegidos = set(random.sample(populares, 7) + random.sample(libro_ids, 5))
+        elegidos = set(azar.sample(populares, 7) + azar.sample(libro_ids, 5))
         for libro_id in elegidos:
-            fecha = datetime.now() - timedelta(days=random.randint(1, 300), minutes=random.randint(0, 1440))
+            fecha = datetime.now() - timedelta(days=azar.randint(1, 300), minutes=azar.randint(0, 1440))
             db.execute('INSERT INTO compras (user_id, libro_id, fecha_compra) VALUES (?, ?, ?)', (user_id, libro_id, fecha))
             compras += 1
-            if random.random() < .6:
-                nota = random.choice([5, 5, 4, 4, 3])
+            if azar.random() < .6:
+                nota = azar.choice([5, 5, 4, 4, 3])
                 db.execute('INSERT OR IGNORE INTO resenas (user_id, libro_id, calificacion, comentario, fecha) VALUES (?, ?, ?, ?, ?)',
-                           (user_id, libro_id, nota, random.choice(COMENTARIOS[nota]), fecha + timedelta(days=3)))
+                           (user_id, libro_id, nota, azar.choice(COMENTARIOS[nota]), fecha + timedelta(days=3)))
                 resenas += 1
 
     db.commit()

@@ -7,7 +7,7 @@ Uso (desde la carpeta del proyecto):
     python herramientas/prueba_carga.py 50000 200000 # libros y compras a medida
 """
 import os
-import random
+import secrets
 import re
 import shutil
 import sqlite3
@@ -28,38 +28,39 @@ sys.path.insert(0, RAIZ)
 from app import app  # noqa: E402  (importar después de fijar DATABASE_PATH)
 from werkzeug.security import generate_password_hash  # noqa: E402
 
+azar = secrets.SystemRandom()
 PALABRAS = ('sombra luz río casa noche mar jardín memoria viento ciudad silencio fuego '
             'tiempo camino isla piedra sueño bosque espejo carta').split()
 GENEROS = ['Novela', 'Misterio', 'Fantasía', 'Ciencia ficción', 'Romance', 'Ensayo', 'Poesía', 'Historia']
 
 print(f'Generando {N_LIBROS:,} libros, {N_USUARIOS:,} usuarios y {N_COMPRAS:,} compras…')
 inicio = time.perf_counter()
-random.seed(1)
 db = sqlite3.connect(copia)
 db.executemany('INSERT INTO catalogo (titulo, autor, genero, año_publicacion, descripcion, precio) VALUES (?, ?, ?, ?, ?, ?)',
-               ((f'El {random.choice(PALABRAS)} de la {random.choice(PALABRAS)} {i}', f'Autor de prueba {i % 900}',
-                 random.choice(GENEROS), random.randint(1800, 2025), 'Libro generado para la prueba de carga.',
-                 random.randrange(20000, 90000, 1000)) for i in range(N_LIBROS)))
-# Administrador temporal, solo existe en la copia
+               ((f'El {azar.choice(PALABRAS)} de la {azar.choice(PALABRAS)} {i}', f'Autor de prueba {i % 900}',
+                 azar.choice(GENEROS), azar.randint(1800, 2025), 'Libro generado para la prueba de carga.',
+                 azar.randrange(20000, 90000, 1000)) for i in range(N_LIBROS)))
+# Administrador temporal con clave aleatoria, solo existe en la copia
+CLAVE_ADMIN = secrets.token_urlsafe(16)
 db.execute("INSERT INTO users (username, email, password, is_admin) VALUES ('admin_carga', 'admin@prueba.test', ?, 1)",
-           (generate_password_hash('carga-temporal'),))
+           (generate_password_hash(CLAVE_ADMIN),))
 db.executemany('INSERT INTO users (username, email, password, is_admin) VALUES (?, ?, ?, 0)',
-               ((f'carga{i}', f'carga{i}@prueba.test', 'x') for i in range(N_USUARIOS)))
+               ((f'carga{i}', f'carga{i}@prueba.test', '!') for i in range(N_USUARIOS)))
 libros = [r[0] for r in db.execute('SELECT id FROM catalogo')]
 usuarios = [r[0] for r in db.execute('SELECT id FROM users')]
 ahora = datetime.now()
 db.executemany('INSERT INTO compras (user_id, libro_id, fecha_compra) VALUES (?, ?, ?)',
-               ((random.choice(usuarios), random.choice(libros), ahora - timedelta(minutes=i)) for i in range(N_COMPRAS)))
+               ((azar.choice(usuarios), azar.choice(libros), ahora - timedelta(minutes=i)) for i in range(N_COMPRAS)))
 db.executemany('INSERT OR IGNORE INTO resenas (user_id, libro_id, calificacion, comentario, fecha) VALUES (?, ?, ?, ?, ?)',
-               ((random.choice(usuarios), random.choice(libros), random.randint(1, 5), 'Reseña de prueba', ahora)
+               ((azar.choice(usuarios), azar.choice(libros), azar.randint(1, 5), 'Reseña de prueba', ahora)
                 for _ in range(N_COMPRAS // 5)))
 db.commit()
 db.close()
 print(f'Datos creados en {time.perf_counter() - inicio:.1f} s\n')
 
 cliente = app.test_client()
-token = re.search(r'csrf_token" value="(\w+)', cliente.get('/registro').text).group(1)
-cliente.post('/login', data={'username': 'admin_carga', 'password': 'carga-temporal', 'csrf_token': token})
+token = re.search(r'csrf_token" value="([^"]+)', cliente.get('/registro').text).group(1)
+cliente.post('/login', data={'username': 'admin_carga', 'password': CLAVE_ADMIN, 'csrf_token': token})
 
 ultima = -(-(N_LIBROS + 102) // 12)
 PAGINAS = [
