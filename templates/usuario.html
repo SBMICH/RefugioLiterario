@@ -1,92 +1,87 @@
+{% from '_macros.html' import portada %}
 {% include 'header.html' %}
-<main class="container user-profile">
-    <div class="profile-header">
-        <h1>Perfil de Usuario</h1>
-        <nav class="profile-nav">
-            <ul>
-                <li><a href="{{ url_for('catalogo') }}" class="button button-add">Ver Catálogo</a></li>
-                {% if session.is_admin %}
-                    <li><a href="{{ url_for('agregar_libro') }}" class="button button-edit">Agregar Libro</a></li>
-                    <li><a href="{{ url_for('ver_usuarios') }}" class="button button-edit">Ver Usuarios</a></li>
-                {% endif %}
-                <li>
-                    <form action="{{ url_for('confirmar_logout') }}" method="post" class="inline-form">
-                        <button type="submit" class="button button-delete">Cerrar Sesión</button>
-                    </form>
-                </li>
-            </ul>
-        </nav>
+<main class="page">
+    <div class="page-header">
+        <div>
+            <p class="eyebrow">Mi cuenta</p>
+            <h1>Hola, {{ username }}</h1>
+        </div>
+        <form action="{{ url_for('confirmar_logout') }}" method="post" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-ghost">Cerrar sesión</button>
+        </form>
     </div>
 
-    <div class="profile-content">
-        <section class="profile-info">
-            <h2>Información Personal</h2>
-            <div class="card" id="perfil-info">
-                <div class="profile-details">
-                    <p><strong>Nombre de Usuario:</strong> <span id="current-username">{{ username }}</span></p>
-                    <p><strong>Correo Electrónico:</strong> <span id="current-email">{{ email }}</span></p>
+    <div class="profile-layout">
+        <section class="panel">
+            <h2>Información personal</h2>
+            <div id="perfil-info">
+                <dl class="details">
+                    <dt>Usuario</dt><dd>{{ username }}</dd>
+                    <dt>Correo</dt><dd>{{ email }}</dd>
+                    <dt>Rol</dt><dd>{{ 'Administrador' if session.get('is_admin') else 'Lector' }}</dd>
+                </dl>
+                <button type="button" class="btn btn-ghost" onclick="toggleEdit()">Editar perfil</button>
+            </div>
+
+            <form id="edit-form" action="{{ url_for('editar_perfil') }}" method="post" hidden>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label for="username">Nombre de usuario</label>
+                    <input type="text" id="username" name="username" value="{{ username }}" pattern="[A-Za-z0-9]{3,30}" required>
                 </div>
-                <button id="edit-button" class="button button-edit" onclick="toggleEdit()">Editar Perfil</button>
-            </div>
+                <div class="form-group">
+                    <label for="email">Correo electrónico</label>
+                    <input type="email" id="email" name="email" value="{{ email }}" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                    <button type="button" class="btn btn-ghost" onclick="toggleEdit()">Cancelar</button>
+                </div>
+            </form>
 
-            <div id="edit-form" class="card" style="display: none;">
-                <h3>Editar Perfil</h3>
-                <form action="{{ url_for('editar_perfil') }}" method="post">
-                    <div class="form-group">
-                        <label for="username">Nombre de Usuario:</label>
-                        <input type="text" id="username" name="username" value="{{ username }}" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="email">Correo Electrónico:</label>
-                        <input type="email" id="email" name="email" value="{{ email }}" required>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="button button-add">Guardar Cambios</button>
-                        <button type="button" class="button button-delete" onclick="toggleEdit()">Cancelar</button>
-                    </div>
-                </form>
-            </div>
+            {% if session.get('is_admin') %}
+            <a href="{{ url_for('admin') }}" class="admin-shortcut">Ir al panel de administración ›</a>
+            {% endif %}
         </section>
 
-        <section class="purchased-books">
-            <h2>Libros Comprados</h2>
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Título</th>
-                            <th>Autor</th>
-                            <th>Precio</th>
-                            <th>Fecha de Compra</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for libro in libros_comprados %}
-                        <tr>
-                            <td data-label="Título">{{ libro[0] }}</td>
-                            <td data-label="Autor">{{ libro[1] }}</td>
-                            <td data-label="Precio">${{ libro[2] }}</td>
-                            <td data-label="Fecha de Compra">{{ libro[3] }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        <section class="panel">
+            <h2>Mis libros</h2>
+            {% if libros_comprados %}
+            <ul class="purchase-list">
+                {% for libro in libros_comprados %}
+                <li>
+                    <div>
+                        <strong>{{ libro[0] }}</strong>
+                        <span class="muted">{{ libro[1] }}</span>
+                    </div>
+                    <div class="purchase-meta">
+                        <span>{{ libro[2] | precio }}</span>
+                        <span class="muted">{{ libro[3] | fecha }}</span>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="muted">Aún no has comprado libros. <a href="{{ url_for('catalogo') }}">Explora el catálogo</a>.</p>
+            {% endif %}
         </section>
     </div>
+
+    <section class="panel wishlist" aria-labelledby="titulo-deseos">
+        <h2 id="titulo-deseos">Mi lista de deseos</h2>
+        {% if favoritos %}
+        <ul class="bestseller-row">
+            {% for libro in favoritos %}
+            <li>
+                <a href="{{ url_for('libro', libro_id=libro['id']) }}" class="book book-sm cover-{{ libro['id'] % 8 }}">{{ portada(libro) }}</a>
+                <span class="bestseller-meta">{{ libro['precio'] | precio }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="muted">Aún no guardas libros. En cada ficha encontrarás el botón «Lista de deseos».</p>
+        {% endif %}
+    </section>
 </main>
 {% include 'footer.html' %}
-
-<script>
-function toggleEdit() {
-    var perfilInfo = document.getElementById('perfil-info');
-    var editForm = document.getElementById('edit-form');
-    if (perfilInfo.style.display === 'none') {
-        perfilInfo.style.display = 'block';
-        editForm.style.display = 'none';
-    } else {
-        perfilInfo.style.display = 'none';
-        editForm.style.display = 'block';
-    }
-}
-</script>

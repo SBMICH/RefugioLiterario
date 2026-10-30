@@ -1,14 +1,18 @@
-<footer class="site-footer">
-    <div class="footer-container">
-        <p>&copy; 2024 Biblioteca Mágica. Todos los derechos reservados.</p>
-        <nav class="footer-nav">
-            <ul>
-                <li><a href="#">Sobre nosotros</a></li>
-                <li><a href="#">Contacto</a></li>
-                <li><a href="#">Política de privacidad</a></li>
-            </ul>
-        </nav>
-    </div>
-</footer>
+    <footer class="site-footer">
+        <div class="footer-container">
+            <div class="footer-brand">
+                <span class="footer-title">Refugio <em>Literario</em></span>
+                <p>Un lugar tranquilo para encontrar tu próxima lectura.</p>
+            </div>
+            <nav class="footer-nav" aria-label="Enlaces del pie de página">
+                <ul>
+                    <li><a href="{{ url_for('index') }}#nosotros">Sobre nosotros</a></li>
+                    <li><a href="#">Contacto</a></li>
+                    <li><a href="#">Política de privacidad</a></li>
+                </ul>
+            </nav>
+        </div>
+        <p class="footer-copy">&copy; 2026 Refugio Literario. Todos los derechos reservados.</p>
+    </footer>
 </body>
 </html>

@@ -1,164 +1,178 @@
+{% from '_macros.html' import portada %}
 {% include 'header.html' %}
 <main>
     <section class="hero">
-        <h2>Bienvenidos a la Refugio Literario</h2>
-        <p>Explora una amplia variedad de libros y descubre tus próximas lecturas favoritas en un mundo de conocimiento y aventura.</p>
-        <a href="{{ url_for('catalogo') }}" class="cta-button">Explorar Catálogo</a>
-    </section>
-
-    <section class="features">
-        <div class="feature">
-            <div class="feature-icon">📚</div>
-            <h3>Miles de Títulos</h3>
-            <p>Accede a una extensa colección de libros de todos los géneros y para todas las edades.</p>
-        </div>
-        <div class="feature">
-            <div class="feature-icon">🔍</div>
-            <h3>Búsqueda Avanzada</h3>
-            <p>Encuentra fácilmente el libro que buscas con nuestro sistema de búsqueda inteligente.</p>
-        </div>
-        <div class="feature">
-            <div class="feature-icon">📱</div>
-            <h3>Lectura en Línea</h3>
-            <p>Disfruta de tus libros favoritos en cualquier dispositivo, en cualquier momento.</p>
-        </div>
-        <div class="feature">
-            <div class="feature-icon">🌟</div>
-            <h3>Recomendaciones Personalizadas</h3>
-            <p>Descubre nuevos libros basados en tus gustos y preferencias de lectura.</p>
-        </div>
-    </section>
-
-    <section class="about-us">
-        <div class="about-us-header">
-            <h2>Sobre Nosotros</h2>
-            <p class="about-us-tagline">Más que una biblioteca, somos una comunidad de amantes de la lectura</p>
-        </div>
-        
-        <div class="about-us-grid">
-            <div class="about-us-story">
-                <h3>Nuestra Historia</h3>
-                <div class="timeline">
-                    <div class="timeline-item">
-                        <span class="year">2010</span>
-                        <p>Fundación de la Refugio Literario con la misión de hacer la literatura accesible a todos.</p>
-                    </div>
-                    <div class="timeline-item">
-                        <span class="year">2015</span>
-                        <p>Expansión digital y lanzamiento de nuestra plataforma de lectura en línea.</p>
-                    </div>
-                    <div class="timeline-item">
-                        <span class="year">2020</span>
-                        <p>Alcanzamos más de 100,000 lectores activos y 50,000 títulos en nuestra colección.</p>
-                    </div>
-                    <div class="timeline-item">
-                        <span class="year">2023</span>
-                        <p>Inauguración de nuestro programa de clubes de lectura virtuales y presenciales.</p>
-                    </div>
+        <div class="hero-inner">
+            <div class="hero-text">
+                <p class="eyebrow">Bienvenido a tu biblioteca</p>
+                <h1>Un refugio tranquilo entre <em>páginas</em> y estanterías</h1>
+                <p class="hero-lead">Pasea sin prisa por nuestra colección, descubre historias que te acompañen y llévate a casa tu próxima lectura favorita.</p>
+                <div class="hero-actions">
+                    <a href="{{ url_for('catalogo') }}" class="btn btn-primary">Explorar el catálogo</a>
+                    {% if 'loggedin' not in session %}
+                    <a href="{{ url_for('login') }}" class="btn btn-ghost">Crear una cuenta</a>
+                    {% endif %}
                 </div>
             </div>
-            
-            <div class="about-us-team">
-                <h3>Nuestro Equipo</h3>
+            <div class="hero-shelf" aria-hidden="true">
+                <div class="shelf-row">
+                    <span class="spine s1"></span><span class="spine s2"></span><span class="spine s3"></span><span class="spine s4 lean"></span>
+                    <span class="spine s5"></span><span class="spine s6"></span><span class="spine s2 short"></span><span class="spine s1"></span>
+                </div>
+                <div class="shelf-row">
+                    <span class="spine s3 short"></span><span class="spine s6"></span><span class="spine s5"></span><span class="spine s1"></span>
+                    <span class="plant"></span><span class="spine s4"></span><span class="spine s2"></span>
+                </div>
+                <div class="shelf-row">
+                    <span class="spine s2"></span><span class="spine s5 short"></span><span class="spine s4"></span><span class="spine s3"></span>
+                    <span class="spine s6"></span><span class="spine s1 lean-left"></span><span class="lamp"></span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {% if vendidos %}
+    <section class="section bestsellers-home" aria-labelledby="titulo-vendidos">
+        <div class="section-header">
+            <p class="eyebrow">Lo que más se lee</p>
+            <h2 id="titulo-vendidos">Los más vendidos</h2>
+            <p class="muted">Los favoritos de nuestra comunidad de lectores.</p>
+        </div>
+        <ol class="bestseller-row centered">
+            {% for libro in vendidos %}
+            <li>
+                <a href="{{ url_for('libro', libro_id=libro['id']) }}" class="book book-sm cover-{{ libro['id'] % 8 }}">
+                    <span class="rank" aria-label="Puesto {{ loop.index }}">{{ loop.index }}</span>
+                    {{ portada(libro) }}
+                </a>
+                <span class="bestseller-meta">{{ libro['ventas'] }} {{ 'venta' if libro['ventas'] == 1 else 'ventas' }}</span>
+            </li>
+            {% endfor %}
+        </ol>
+        <div class="center-cta"><a href="{{ url_for('catalogo', orden='vendidos') }}" class="btn btn-ghost">Ver todos los más vendidos</a></div>
+    </section>
+    {% endif %}
+
+    <section class="section features">
+        <div class="feature">
+            <div class="feature-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h3v16H5zM10 4h3v16h-3zM15.2 4.6l2.9-.8 3.9 15.6-2.9.8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+            </div>
+            <h3>Miles de títulos</h3>
+            <p>Una colección cuidada de todos los géneros y para todas las edades.</p>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </div>
+            <h3>Busca y filtra</h3>
+            <p>Encuentra libros por título, autor o género y ordénalos a tu gusto.</p>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10v18l-5-3.5L7 21z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+            </div>
+            <h3>Lista de deseos</h3>
+            <p>Guarda los libros que te gustan para comprarlos más adelante.</p>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+            </div>
+            <h3>Reseñas de lectores</h3>
+            <p>Califica con estrellas y lee lo que opinan otros lectores.</p>
+        </div>
+    </section>
+
+    <section class="section about-us" id="nosotros">
+        <div class="section-header">
+            <p class="eyebrow">Sobre nosotros</p>
+            <h2>Más que una biblioteca, una comunidad de lectores</h2>
+        </div>
+
+        <div class="about-grid">
+            <div class="about-story">
+                <h3>Nuestra historia</h3>
+                <ol class="timeline">
+                    <li><span class="year">2010</span><p>Fundamos Refugio Literario con la misión de hacer la literatura accesible a todos.</p></li>
+                    <li><span class="year">2015</span><p>Expansión digital y lanzamiento de nuestra plataforma en línea.</p></li>
+                    <li><span class="year">2020</span><p>Superamos los 100.000 lectores activos y los 50.000 títulos.</p></li>
+                    <li><span class="year">2023</span><p>Inauguramos los clubes de lectura virtuales y presenciales.</p></li>
+                    <li><span class="year">2026</span><p>Renovamos nuestro espacio para que leer sea aún más tranquilo.</p></li>
+                </ol>
+            </div>
+
+            <div class="about-team">
+                <h3>Nuestro equipo</h3>
                 <div class="team-grid">
-                    <div class="team-member">
-                        <img src="{{ url_for('static', filename='images/team/director.jpg') }}" alt="Director de la Biblioteca">
-                        <h4>Carlos Ruiz</h4>
-                        <p>Director</p>
-                    </div>
-                    <div class="team-member">
-                        <img src="{{ url_for('static', filename='images/team/bibliotecaria.jpg') }}" alt="Bibliotecaria Principal">
-                        <h4>Ana García</h4>
-                        <p>Bibliotecaria Principal</p>
-                    </div>
-                    <div class="team-member">
-                        <img src="{{ url_for('static', filename='images/team/eventos.jpg') }}" alt="Coordinadora de Eventos">
-                        <h4>Laura Martínez</h4>
-                        <p>Coordinadora de Eventos</p>
-                    </div>
+                    <figure class="team-member">
+                        <img src="{{ url_for('static', filename='images/team/director.jpg') }}" alt="Carlos Ruiz, director">
+                        <figcaption><strong>Carlos Ruiz</strong><span>Director</span></figcaption>
+                    </figure>
+                    <figure class="team-member">
+                        <img src="{{ url_for('static', filename='images/team/bibliotecaria.jpg') }}" alt="Ana García, bibliotecaria principal">
+                        <figcaption><strong>Ana García</strong><span>Bibliotecaria principal</span></figcaption>
+                    </figure>
+                    <figure class="team-member">
+                        <img src="{{ url_for('static', filename='images/team/eventos.jpg') }}" alt="Laura Martínez, coordinadora de eventos">
+                        <figcaption><strong>Laura Martínez</strong><span>Coordinadora de eventos</span></figcaption>
+                    </figure>
                 </div>
             </div>
         </div>
 
-        <div class="about-us-values">
-            <h3>Nuestros Valores</h3>
-            <div class="values-grid">
-                <div class="value-item">
-                    <div class="value-icon">🎯</div>
-                    <h4>Accesibilidad</h4>
-                    <p>Creemos que la literatura debe estar al alcance de todos.</p>
-                </div>
-                <div class="value-item">
-                    <div class="value-icon">🤝</div>
-                    <h4>Comunidad</h4>
-                    <p>Fomentamos un espacio de intercambio y crecimiento mutuo.</p>
-                </div>
-                <div class="value-item">
-                    <div class="value-icon">💡</div>
-                    <h4>Innovación</h4>
-                    <p>Buscamos constantemente nuevas formas de mejorar la experiencia de lectura.</p>
-                </div>
+        <div class="values-grid">
+            <div class="value-item">
+                <h4>Accesibilidad</h4>
+                <p>Creemos que la literatura debe estar al alcance de todos.</p>
+            </div>
+            <div class="value-item">
+                <h4>Comunidad</h4>
+                <p>Fomentamos un espacio de intercambio y crecimiento mutuo.</p>
+            </div>
+            <div class="value-item">
+                <h4>Innovación</h4>
+                <p>Buscamos nuevas formas de mejorar la experiencia de leer.</p>
             </div>
         </div>
     </section>
 
-    <section class="events">
-        <h2>Próximos Eventos</h2>
+    <section class="section events">
+        <div class="section-header">
+            <p class="eyebrow">Agenda</p>
+            <h2>Próximos encuentros</h2>
+        </div>
         <div class="events-grid">
-            <div class="event-card">
-                <div class="event-date">
-                    <span class="day">15</span>
-                    <span class="month">NOV</span>
-                </div>
+            <article class="event-card">
+                <div class="event-date"><span class="day">15</span><span class="month">nov</span></div>
                 <div class="event-content">
-                    <h3>Club de Lectura: "Cien años de soledad"</h3>
-                    <p>Únete a nuestra discusión mensual sobre esta obra maestra de Gabriel García Márquez.</p>
-                    <a href="#" class="event-link">Más información</a>
+                    <h3>Club de lectura: «Cien años de soledad»</h3>
+                    <p>Nuestra charla mensual sobre la obra maestra de Gabriel García Márquez.</p>
                 </div>
-            </div>
-            <div class="event-card">
-                <div class="event-date">
-                    <span class="day">20</span>
-                    <span class="month">NOV</span>
-                </div>
+            </article>
+            <article class="event-card">
+                <div class="event-date"><span class="day">20</span><span class="month">nov</span></div>
                 <div class="event-content">
-                    <h3>Taller de Escritura Creativa</h3>
-                    <p>Aprende técnicas de escritura creativa con nuestra escritora residente.</p>
-                    <a href="#" class="event-link">Más información</a>
+                    <h3>Taller de escritura creativa</h3>
+                    <p>Aprende técnicas de escritura con nuestra escritora residente.</p>
                 </div>
-            </div>
-            <div class="event-card">
-                <div class="event-date">
-                    <span class="day">25</span>
-                    <span class="month">NOV</span>
-                </div>
+            </article>
+            <article class="event-card">
+                <div class="event-date"><span class="day">25</span><span class="month">nov</span></div>
                 <div class="event-content">
-                    <h3>Encuentro con Autor</h3>
-                    <p>Charla y firma de libros con reconocidos autores contemporáneos.</p>
-                    <a href="#" class="event-link">Más información</a>
+                    <h3>Encuentro con autores</h3>
+                    <p>Charla y firma de libros con autores contemporáneos.</p>
                 </div>
-            </div>
+            </article>
         </div>
     </section>
 
     <section class="statistics">
         <div class="stat-container">
-            <div class="stat-item">
-                <span class="stat-number">50,000+</span>
-                <span class="stat-label">Libros Disponibles</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-number">100,000+</span>
-                <span class="stat-label">Lectores Activos</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-number">1,000+</span>
-                <span class="stat-label">Eventos Realizados</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-number">24/7</span>
-                <span class="stat-label">Acceso Digital</span>
-            </div>
+            <div class="stat-item"><span class="stat-number">50.000+</span><span class="stat-label">Libros disponibles</span></div>
+            <div class="stat-item"><span class="stat-number">100.000+</span><span class="stat-label">Lectores activos</span></div>
+            <div class="stat-item"><span class="stat-number">1.000+</span><span class="stat-label">Eventos realizados</span></div>
+            <div class="stat-item"><span class="stat-number">24/7</span><span class="stat-label">Acceso digital</span></div>
         </div>
     </section>
 </main>

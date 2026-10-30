@@ -1,0 +1,115 @@
+{% from '_macros.html' import paginacion %}
+{% include 'header.html' %}
+<main class="page admin">
+    <div class="admin-header">
+        <h1>Administración</h1>
+        <div class="admin-stats">
+            <span><strong>{{ resumen.libros }}</strong> libros</span>
+            <span><strong>{{ resumen.usuarios }}</strong> usuarios</span>
+            <span><strong>{{ resumen.compras }}</strong> compras</span>
+            <span><strong>{{ resumen.ingresos | precio }}</strong> en ventas</span>
+        </div>
+    </div>
+
+    <nav class="admin-tabs" aria-label="Secciones">
+        <a href="{{ url_for('admin', tab='libros') }}" {% if tab == 'libros' %}aria-current="page"{% endif %}>Libros</a>
+        <a href="{{ url_for('admin', tab='usuarios') }}" {% if tab == 'usuarios' %}aria-current="page"{% endif %}>Usuarios</a>
+        <a href="{{ url_for('admin', tab='ventas') }}" {% if tab == 'ventas' %}aria-current="page"{% endif %}>Más vendidos</a>
+    </nav>
+
+    {% if tab != 'ventas' %}
+    <form class="admin-toolbar" method="get" action="{{ url_for('admin') }}" role="search">
+        <input type="hidden" name="tab" value="{{ tab }}">
+        <input type="search" name="q" value="{{ q }}" class="admin-search"
+               placeholder="{{ 'Buscar por nombre o correo…' if tab == 'usuarios' else 'Buscar por título, autor o género…' }}" aria-label="Buscar">
+        <button type="submit" class="btn btn-ghost">Buscar</button>
+        {% if tab == 'libros' %}<a href="{{ url_for('agregar_libro') }}" class="btn btn-primary">+ Agregar libro</a>{% endif %}
+    </form>
+    <p class="results-info">
+        {{ total }} {{ 'resultado' if total == 1 else 'resultados' }}{% if q %} para «{{ q }}» · <a href="{{ url_for('admin', tab=tab) }}">Limpiar</a>{% endif %}
+        {% if total_paginas > 1 %} · página {{ pagina }} de {{ total_paginas }}{% endif %}
+    </p>
+    {% endif %}
+
+    <div class="table-wrap">
+    {% if tab == 'libros' %}
+        <table class="admin-table">
+            <thead>
+                <tr><th>Título</th><th>Autor</th><th>Género</th><th>Año</th><th class="num">Ventas</th><th class="num">Precio</th><th class="actions-col"><span class="sr-only">Acciones</span></th></tr>
+            </thead>
+            <tbody>
+                {% for libro in filas %}
+                <tr>
+                    <td data-label="Título"><a href="{{ url_for('libro', libro_id=libro['id']) }}" class="plain-link"><strong>{{ libro['titulo'] }}</strong></a></td>
+                    <td data-label="Autor">{{ libro['autor'] }}</td>
+                    <td data-label="Género">{{ libro['genero'] or '—' }}</td>
+                    <td data-label="Año">{{ libro['año_publicacion'] or '—' }}</td>
+                    <td data-label="Ventas" class="num">{{ libro['ventas'] }}</td>
+                    <td data-label="Precio" class="num">{{ libro['precio'] | precio }}</td>
+                    <td class="row-actions">
+                        <a href="{{ url_for('editar_libro', libro_id=libro['id']) }}" class="link-btn">Editar</a>
+                        <form action="{{ url_for('eliminar_libro', libro_id=libro['id']) }}" method="post" class="inline-form" onsubmit="return confirm('¿Seguro que deseas eliminar este libro?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="link-btn danger">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="empty-row">No hay libros que coincidan.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% elif tab == 'usuarios' %}
+        <table class="admin-table">
+            <thead>
+                <tr><th>Usuario</th><th>Correo</th><th>Rol</th><th class="num">Compras</th><th class="actions-col"><span class="sr-only">Acciones</span></th></tr>
+            </thead>
+            <tbody>
+                {% for usuario in filas %}
+                <tr>
+                    <td data-label="Usuario"><strong>{{ usuario['username'] }}</strong>{% if usuario['id'] == session['id'] %} <span class="muted">(tú)</span>{% endif %}</td>
+                    <td data-label="Correo">{{ usuario['email'] }}</td>
+                    <td data-label="Rol"><span class="tag {% if usuario['is_admin'] %}tag-admin{% endif %}">{{ 'Administrador' if usuario['is_admin'] else 'Lector' }}</span></td>
+                    <td data-label="Compras" class="num">{{ usuario['compras'] }}</td>
+                    <td class="row-actions">
+                        <a href="{{ url_for('editar_usuario', user_id=usuario['id']) }}" class="link-btn">Editar</a>
+                        {% if usuario['id'] != session['id'] %}
+                        <form action="{{ url_for('eliminar_usuario', user_id=usuario['id']) }}" method="post" class="inline-form" onsubmit="return confirm('¿Seguro que deseas eliminar este usuario?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="link-btn danger">Eliminar</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="empty-row">No hay usuarios que coincidan.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <table class="admin-table">
+            <thead>
+                <tr><th class="num">#</th><th>Título</th><th>Autor</th><th class="num">Ventas</th><th class="num">Ingresos</th></tr>
+            </thead>
+            <tbody>
+                {% for libro in filas %}
+                <tr>
+                    <td data-label="Puesto" class="num">{{ loop.index }}</td>
+                    <td data-label="Título"><a href="{{ url_for('libro', libro_id=libro['id']) }}" class="plain-link"><strong>{{ libro['titulo'] }}</strong></a></td>
+                    <td data-label="Autor">{{ libro['autor'] }}</td>
+                    <td data-label="Ventas" class="num">{{ libro['ventas'] }}</td>
+                    <td data-label="Ingresos" class="num">{{ (libro['ventas'] * (libro['precio'] or 0)) | precio }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="empty-row">Todavía no hay ventas.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+    </div>
+
+    {% set argumentos = {'tab': tab} %}
+    {% if q %}{% set _ = argumentos.update(q=q) %}{% endif %}
+    {{ paginacion('admin', pagina, total_paginas, argumentos, nombre='pagina') }}
+</main>
+{% include 'footer.html' %}

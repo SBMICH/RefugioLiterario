@@ -1,41 +1,37 @@
 {% include 'header.html' %}
-<main class="container">
-    <div class="card">
-        <h1>Agregar Libro</h1>
-        <form action="{{ url_for('agregar_libro') }}" method="post" class="form">
-            <div class="form-group">
-                <label for="titulo">Título:</label>
+<main class="page admin narrow">
+    <a href="{{ url_for('admin') }}" class="back-link">‹ Volver a administración</a>
+    <div class="admin-card">
+        <h1>Agregar libro</h1>
+        <form action="{{ url_for('agregar_libro') }}" method="post" class="form-grid">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group span-2">
+                <label for="titulo">Título</label>
                 <input type="text" id="titulo" name="titulo" required>
             </div>
-            
-            <div class="form-group">
-                <label for="autor">Autor:</label>
+            <div class="form-group span-2">
+                <label for="autor">Autor</label>
                 <input type="text" id="autor" name="autor" required>
             </div>
-            
             <div class="form-group">
-                <label for="genero">Género:</label>
+                <label for="genero">Género</label>
                 <input type="text" id="genero" name="genero" required>
             </div>
-            
             <div class="form-group">
-                <label for="anio">Año de Publicación:</label>
+                <label for="año_publicacion">Año de publicación</label>
                 <input type="number" id="año_publicacion" name="año_publicacion" required>
             </div>
-            
-            <div class="form-group">
-                <label for="descripcion">Descripción:</label>
-                <textarea id="descripcion" name="descripcion" required></textarea>
+            <div class="form-group span-2">
+                <label for="descripcion">Descripción</label>
+                <textarea id="descripcion" name="descripcion" rows="4" required></textarea>
             </div>
-            
             <div class="form-group">
-                <label for="precio">Precio:</label>
-                <input type="number" id="precio" name="precio" step="0.01" required>
+                <label for="precio">Precio</label>
+                <input type="number" id="precio" name="precio" min="0" step="1" required>
             </div>
-            
-            <div class="form-actions">
-                <button type="submit" class="button button-add">Agregar Libro</button>
-                <a href="{{ url_for('catalogo') }}" class="button button-delete">Cancelar</a>
+            <div class="form-actions span-2">
+                <button type="submit" class="btn btn-primary">Agregar libro</button>
+                <a href="{{ url_for('admin') }}" class="btn btn-ghost">Cancelar</a>
             </div>
         </form>
     </div>

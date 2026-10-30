@@ -1,14 +1,12 @@
 {% include 'header.html' %}
-<main class="container">
-    <div class="card">
+<main class="page narrow">
+    <div class="panel thanks">
+        <svg class="thanks-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6.5C10.3 5.2 7.9 4.5 4 4.5v13c3.9 0 6.3.7 8 2 1.7-1.3 4.1-2 8-2v-13c-3.9 0-6.3.7-8 2Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M12 6.5v13" stroke="currentColor" stroke-width="1.3"/></svg>
         <h1>¡Gracias por tu compra!</h1>
-        <div class="purchase-summary">
-            <p class="total-price">Tu compra ha sido registrada exitosamente.</p>
-            <p>¡Esperamos que disfrutes de tu libro!</p>
-        </div>
-        <div class="form-actions">
-            <a href="{{ url_for('catalogo') }}" class="button button-add">Volver al Catálogo</a>
-            <a href="{{ url_for('usuario') }}" class="button button-edit">Ver Mi Perfil</a>
+        <p>Tu pedido quedó registrado. Esperamos que disfrutes cada página.</p>
+        <div class="form-actions center">
+            <a href="{{ url_for('catalogo') }}" class="btn btn-primary">Volver al catálogo</a>
+            <a href="{{ url_for('usuario') }}" class="btn btn-ghost">Ver mis libros</a>
         </div>
     </div>
 </main>

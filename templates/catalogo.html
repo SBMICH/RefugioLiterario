@@ -1,70 +1,122 @@
+{% from '_macros.html' import portada, icono_libro, estrellas, boton_favorito, paginacion %}
 {% include 'header.html' %}
-<main id="centered-container">
-    <h1>Catálogo de Libros</h1>
-
-    <!-- Mostrar mensajes de flash -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <ul class="flash-messages" role="alert" aria-live="polite">
-                {% for category, message in messages %}
-                    <li class="{{ category }}">{{ message }}</li>
-                {% endfor %}
-            </ul>
+<main class="page">
+    <div class="page-header">
+        <div>
+            <p class="eyebrow">Nuestra colección</p>
+            <h1>Catálogo de libros</h1>
+            <p class="page-lead">Toca un libro para abrirlo y ver sus detalles.</p>
+        </div>
+        {% if session.get('is_admin') %}
+        <a href="{{ url_for('agregar_libro') }}" class="btn btn-primary">+ Agregar libro</a>
         {% endif %}
-    {% endwith %}
-
-    <div class="table-responsive">
-        <table aria-label="Catálogo de libros">
-            <thead>
-                <tr>
-                    <th scope="col">#</th>
-                    <th scope="col">Título</th>
-                    <th scope="col">Autor</th>
-                    <th scope="col">Género</th>
-                    <th scope="col">Año de Publicación</th>
-                    <th scope="col">Descripción</th>
-                    <th scope="col">Precio</th>
-                    {% if session['is_admin'] %}
-                    <th scope="col">Acciones</th>
-                    {% else %}
-                    <th scope="col"> </th>
-                    {% endif %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for libro in libros %}
-                <tr>
-                    <td data-label="#">{{ loop.index + (page_num - 1) * 10 }}</td>
-                    <td data-label="Título">{{ libro[1] }}</td>
-                    <td data-label="Autor">{{ libro[2] }}</td>
-                    <td data-label="Género">{{ libro[3] }}</td>
-                    <td data-label="Año de Publicación">{{ libro[4] }}</td>
-                    <td data-label="Descripción">{{ libro[5] }}</td>
-                    <td data-label="Precio">{{ libro[6] }}</td>
-                    {% if session['is_admin'] %}
-                    <td data-label="Acciones">
-                        <a href="{{ url_for('editar_libro', libro_id=libro[0]) }}" class="button button-edit">Editar</a>
-                        <form action="{{ url_for('eliminar_libro', libro_id=libro[0]) }}" method="post" class="inline-form">
-                            <button type="submit" class="button button-delete" onclick="return confirm('¿Estás seguro de que deseas eliminar este libro?');">Eliminar</button>
-                        </form>
-                    </td>
-                    {% else %}
-                    <td data-label="Agregar al Carrito">
-                        <form action="{{ url_for('agregar_carrito', libro_id=libro[0]) }}" method="post" class="inline-form">
-                            <button type="submit" class="button button-add">Agregar al Carrito</button>
-                        </form>
-                    </td>
-                    {% endif %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
     </div>
-    
-    <nav class="pagination" aria-label="Paginación del catálogo">
-        {% for page in range(1, total_paginas + 1) %}
-        <a href="{{ url_for('catalogo', page_num=page) }}" {% if page == page_num %}aria-current="page"{% endif %}>{{ page }}</a>
-        {% endfor %}
-    </nav>
+
+    {% if vendidos %}
+    <section class="bestsellers" aria-labelledby="titulo-vendidos">
+        <div class="section-title-row">
+            <h2 id="titulo-vendidos">Los más vendidos</h2>
+            <a href="{{ url_for('catalogo', orden='vendidos') }}" class="link-more">Ver todos ›</a>
+        </div>
+        <ol class="bestseller-row">
+            {% for libro in vendidos %}
+            <li>
+                <a href="{{ url_for('libro', libro_id=libro['id']) }}" class="book book-sm cover-{{ libro['id'] % 8 }}">
+                    <span class="rank" aria-label="Puesto {{ loop.index }}">{{ loop.index }}</span>
+                    {{ portada(libro) }}
+                </a>
+                <span class="bestseller-meta">{{ libro['ventas'] }} {{ 'venta' if libro['ventas'] == 1 else 'ventas' }}</span>
+            </li>
+            {% endfor %}
+        </ol>
+    </section>
+    {% endif %}
+
+    <form class="catalog-tools" method="get" action="{{ url_for('catalogo') }}" role="search">
+        <div class="search-field">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <input type="search" name="q" value="{{ q }}" placeholder="Buscar por título o autor…" aria-label="Buscar por título o autor">
+        </div>
+        <select name="genero" aria-label="Filtrar por género" onchange="this.form.submit()">
+            <option value="">Todos los géneros</option>
+            {% for g in generos %}
+            <option value="{{ g }}" {% if g == genero %}selected{% endif %}>{{ g }}</option>
+            {% endfor %}
+        </select>
+        <select name="orden" aria-label="Ordenar por" onchange="this.form.submit()">
+            {% for clave, (nombre, _) in ordenes.items() %}
+            <option value="{{ clave }}" {% if clave == orden %}selected{% endif %}>{{ nombre }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary">Buscar</button>
+    </form>
+
+    <p class="results-info">
+        {{ total_libros }} {{ 'libro' if total_libros == 1 else 'libros' }}
+        {% if filtrando %}
+            encontrados{% if q %} para «{{ q }}»{% endif %}{% if genero %} en {{ genero }}{% endif %}
+            · <a href="{{ url_for('catalogo', orden=orden) }}">Quitar filtros</a>
+        {% endif %}
+    </p>
+
+    {% if libros %}
+    <div class="bookcase">
+        <ul class="book-grid">
+            {% for libro in libros %}
+            {% set val = valoraciones.get(libro['id']) %}
+            <li class="book-slot">
+                <button type="button" class="book cover-{{ libro['id'] % 8 }}" onclick="openBook('libro-{{ libro['id'] }}')" aria-haspopup="dialog">
+                    {% if libro['id'] in favoritos %}<span class="fav-mark" aria-label="En tu lista de deseos">♥</span>{% endif %}
+                    {{ portada(libro) }}
+                </button>
+
+                <dialog class="book-dialog" id="libro-{{ libro['id'] }}" aria-labelledby="titulo-{{ libro['id'] }}">
+                    <div class="dialog-cover cover-{{ libro['id'] % 8 }}" aria-hidden="true">
+                        {{ icono_libro() }}
+                        <span class="book-title">{{ libro['titulo'] }}</span>
+                    </div>
+                    <div class="dialog-body">
+                        <button type="button" class="dialog-close" aria-label="Cerrar" onclick="this.closest('dialog').close()">×</button>
+                        {% if libro['genero'] %}<p class="eyebrow">{{ libro['genero'] }}</p>{% endif %}
+                        <h2 id="titulo-{{ libro['id'] }}">{{ libro['titulo'] }}</h2>
+                        <p class="dialog-meta">{{ libro['autor'] }}{% if libro['año_publicacion'] %} · {{ libro['año_publicacion'] }}{% endif %}</p>
+                        {% if val %}{{ estrellas(val[0], val[1]) }}{% endif %}
+                        {% if libro['descripcion'] %}<p class="dialog-desc">{{ libro['descripcion'] }}</p>{% endif %}
+                        <p class="dialog-price">{{ libro['precio'] | precio }}</p>
+
+                        <div class="dialog-actions">
+                            {% if session.get('is_admin') %}
+                                <a href="{{ url_for('editar_libro', libro_id=libro['id']) }}" class="btn btn-primary">Editar libro</a>
+                                <form action="{{ url_for('eliminar_libro', libro_id=libro['id']) }}" method="post" class="inline-form" onsubmit="return confirm('¿Seguro que deseas eliminar este libro?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-danger-ghost">Eliminar</button>
+                                </form>
+                            {% else %}
+                                <form action="{{ url_for('agregar_carrito', libro_id=libro['id']) }}" method="post" class="inline-form">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-primary">Agregar al carrito</button>
+                                </form>
+                                {{ boton_favorito(libro['id'], libro['id'] in favoritos) }}
+                            {% endif %}
+                        </div>
+                        <a href="{{ url_for('libro', libro_id=libro['id']) }}" class="link-more dialog-more">Ver ficha completa y reseñas ›</a>
+                    </div>
+                </dialog>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No encontramos libros con esos filtros.</p>
+        <a href="{{ url_for('catalogo') }}" class="btn btn-ghost">Ver todo el catálogo</a>
+    </div>
+    {% endif %}
+
+    {% set argumentos = {} %}
+    {% if q %}{% set _ = argumentos.update(q=q) %}{% endif %}
+    {% if genero %}{% set _ = argumentos.update(genero=genero) %}{% endif %}
+    {% if orden != 'titulo' %}{% set _ = argumentos.update(orden=orden) %}{% endif %}
+    {{ paginacion('catalogo', page_num, total_paginas, argumentos) }}
 </main>
 {% include 'footer.html' %}
