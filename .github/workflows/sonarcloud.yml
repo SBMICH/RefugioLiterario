@@ -5,14 +5,25 @@ on:
       - main
   pull_request:
     types: [opened, synchronize, reopened]
+permissions:
+  contents: read
 jobs:
   sonarqube:
-    name: SonarQube
+    name: Pruebas y SonarQube
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - name: Instalar Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Ejecutar pruebas con cobertura
+        run: python -m pytest --cov=app --cov-report=xml --cov-report=term
       - name: Cache SonarQube packages
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:

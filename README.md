@@ -34,6 +34,16 @@ no en el sitio publicado.
 | `SESSION_COOKIE_SECURE=1` | Actívala cuando el sitio use HTTPS. |
 
 
+## Pruebas automáticas
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest --cov=app
+```
+
+Cada prueba usa una base de datos temporal, así que no toca `libreria.db`. GitHub Actions
+las ejecuta en cada push y envía la cobertura a SonarCloud.
+
 ## Prueba de carga
 
 ```bash

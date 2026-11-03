@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
+from urllib.parse import urlparse
 import os
 import re
 import secrets
@@ -94,7 +95,7 @@ csrf = CSRFProtect(app)
 @app.errorhandler(CSRFError)
 def csrf_invalido(error):
     flash('La sesión expiró, vuelve a intentarlo.')
-    return redirect(request.referrer or url_for('index'))
+    return volver(url_for('index'))
 
 def email_valido(email):
     """Validación simple de correo (sin expresiones regulares costosas)."""
@@ -118,6 +119,62 @@ def formato_fecha(valor):
 
 def es_admin():
     return 'loggedin' in session and bool(session.get('is_admin'))
+
+def volver(por_defecto):
+    """Redirige a la página anterior solo si es de este mismo sitio (evita redirecciones abiertas)."""
+    anterior = request.referrer
+    if anterior:
+        destino = urlparse(anterior)
+        if destino.scheme in ('http', 'https') and destino.netloc == request.host:
+            return redirect(anterior)
+    return redirect(por_defecto)
+
+USUARIO_VALIDO = re.compile(r'[A-Za-z0-9]{3,30}')
+
+@app.before_request
+def cargar_usuario():
+    """Comprueba en cada visita que la cuenta siga existiendo y con el mismo rol.
+
+    Así, si un administrador elimina una cuenta o le quita el rol de admin, el cambio
+    se aplica de inmediato aunque esa persona tenga la sesión abierta.
+    """
+    if 'loggedin' not in session:
+        return
+    cuenta = get_db().execute('SELECT username, is_admin FROM users WHERE id = ?', (session.get('id'),)).fetchone()
+    if cuenta is None:
+        session.clear()
+        return
+    session['username'] = cuenta['username']
+    session['is_admin'] = bool(cuenta['is_admin'])
+
+@app.after_request
+def cabeceras_seguridad(respuesta):
+    respuesta.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    respuesta.headers.setdefault('X-Frame-Options', 'DENY')
+    respuesta.headers.setdefault('Referrer-Policy', 'same-origin')
+    respuesta.headers.setdefault('Content-Security-Policy', "frame-ancestors 'none'; object-src 'none'; base-uri 'self'")
+    return respuesta
+
+def datos_libro(formulario):
+    """Valida el formulario de un libro. Devuelve (valores, None) o (None, mensaje de error)."""
+    titulo = formulario.get('titulo', '').strip()
+    autor = formulario.get('autor', '').strip()
+    genero = formulario.get('genero', '').strip()
+    descripcion = formulario.get('descripcion', '').strip()
+    if not titulo or not autor:
+        return None, 'El título y el autor son obligatorios.'
+    if len(titulo) > 255 or len(autor) > 255 or len(genero) > 100 or len(descripcion) > 5000:
+        return None, 'Algún campo es demasiado largo.'
+    try:
+        anio = int(formulario.get('año_publicacion', ''))
+        precio = int(float(formulario.get('precio', '')))
+    except ValueError:
+        return None, 'El año y el precio deben ser números.'
+    if not -3000 <= anio <= datetime.now().year + 1:
+        return None, 'El año de publicación no es válido.'
+    if precio < 0:
+        return None, 'El precio no puede ser negativo.'
+    return (titulo, autor, genero, anio, descripcion, precio), None
 
 if not os.path.exists(DATABASE):
     init_db()
@@ -183,14 +240,14 @@ def registro():
         password = request.form['new-password']
 
         cursor = get_db().cursor()
-        cursor.execute('SELECT * FROM users WHERE username = ?', (username,))
+        cursor.execute('SELECT username FROM users WHERE username = ? OR email = ?', (username, email))
         cuenta = cursor.fetchone()
 
         if cuenta:
-            flash('¡El usuario ya existe!')
+            flash('¡El usuario ya existe!' if cuenta['username'] == username else 'Ese correo ya está registrado.')
         elif not email_valido(email):
             flash('Correo electrónico inválido')
-        elif not re.fullmatch(r'[A-Za-z0-9]{3,30}', username):
+        elif not USUARIO_VALIDO.fullmatch(username):
             flash('El nombre de usuario debe tener entre 3 y 30 caracteres alfanuméricos')
         elif len(password) < 8:
             flash('La contraseña debe tener al menos 8 caracteres')
@@ -210,11 +267,13 @@ def login():
         username = request.form['username']
         password = request.form['password']
         ip = request.remote_addr
-        fallos, desde = intentos_fallidos.get(ip, (0, datetime.now()))
-        if datetime.now() - desde > BLOQUEO:
-            fallos = 0
+        ahora = datetime.now()
+        # Los bloqueos vencidos se borran; así el registro no crece sin límite
+        for clave in [k for k, (_, inicio) in intentos_fallidos.items() if ahora - inicio > BLOQUEO]:
+            del intentos_fallidos[clave]
+        fallos, desde = intentos_fallidos.get(ip, (0, ahora))
         if fallos >= MAX_INTENTOS:
-            minutos = int((BLOQUEO - (datetime.now() - desde)).total_seconds() // 60) + 1
+            minutos = int((BLOQUEO - (ahora - desde)).total_seconds() // 60) + 1
             flash(f'Demasiados intentos fallidos. Inténtalo de nuevo en {minutos} minutos.')
             return render_template('registro.html')
 
@@ -233,7 +292,7 @@ def login():
                 flash('¡Inicio de sesión exitoso!')
                 return redirect(url_for('catalogo', page_num=1))  # Asegúrate de redirigir con page_num
         if not cuenta or not check_password_hash(cuenta[3], password):
-            intentos_fallidos[ip] = (fallos + 1, desde if fallos else datetime.now())
+            intentos_fallidos[ip] = (fallos + 1, desde if fallos else ahora)
             restantes = MAX_INTENTOS - fallos - 1
             if restantes > 0:
                 flash(f'Usuario o contraseña incorrectos. Te quedan {restantes} intentos.')
@@ -335,7 +394,7 @@ def favorito(libro_id):
         db.execute('INSERT INTO favoritos (user_id, libro_id) VALUES (?, ?)', (session['id'], libro_id))
         flash('Guardado en tu lista de deseos.')
     db.commit()
-    return redirect(request.referrer or url_for('libro', libro_id=libro_id))
+    return volver(url_for('libro', libro_id=libro_id))
 
 @app.route('/resena/<int:libro_id>', methods=['POST'])
 def resena(libro_id):
@@ -405,7 +464,7 @@ def agregar_carrito(libro_id):
 
             get_db().commit()
             
-        return redirect(request.referrer or url_for('catalogo'))
+        return volver(url_for('catalogo'))
     else:
         flash('Debes iniciar sesión para agregar libros al carrito.')
         return redirect(url_for('registro'))
@@ -537,7 +596,7 @@ def editar_perfil():
         nuevo_username = request.form.get('username')
         nuevo_email = request.form.get('email')
 
-        if not nuevo_username or not re.fullmatch(r'[A-Za-z0-9]{3,30}', nuevo_username):
+        if not nuevo_username or not USUARIO_VALIDO.fullmatch(nuevo_username):
             flash('El nombre de usuario debe tener entre 3 y 30 caracteres alfanuméricos')
             return redirect(url_for('usuario'))
         if not email_valido(nuevo_email):
@@ -575,58 +634,49 @@ def confirmar_logout():
 
 @app.route('/agregar_libro', methods=['GET', 'POST'])
 def agregar_libro():
-    if 'loggedin' in session and session.get('is_admin'):
-        if request.method == 'POST' and 'titulo' in request.form and 'autor' in request.form and 'genero' in request.form and 'año_publicacion' in request.form and 'descripcion' in request.form and 'precio' in request.form:
-            titulo = request.form['titulo']
-            autor = request.form['autor']
-            genero = request.form['genero']
-            anio = request.form['año_publicacion']
-            descripcion = request.form['descripcion']
-            precio = request.form['precio']
-
-            cursor = get_db().cursor()
-            cursor.execute('INSERT INTO catalogo (titulo, autor, genero, año_publicacion, descripcion, precio) VALUES (?, ?, ?, ?, ?, ?)', (titulo, autor, genero, anio, descripcion, precio))
-            get_db().commit()
-            flash('¡Libro añadido exitosamente!')
-            return redirect(url_for('admin'))
-        
-        return render_template('agregar_libro.html')
-    else:
+    if not es_admin():
         flash('No tienes permiso para acceder a esta página.')
         return redirect(url_for('registro'))
+    if request.method == 'POST':
+        valores, error = datos_libro(request.form)
+        if error:
+            flash(error)
+            return render_template('agregar_libro.html'), 400
+        db = get_db()
+        db.execute('INSERT INTO catalogo (titulo, autor, genero, año_publicacion, descripcion, precio) VALUES (?, ?, ?, ?, ?, ?)', valores)
+        db.commit()
+        flash('¡Libro añadido exitosamente!')
+        return redirect(url_for('admin'))
+    return render_template('agregar_libro.html')
 
 @app.route('/editar_libro/<int:libro_id>', methods=['GET', 'POST'])
 def editar_libro(libro_id):
-    if 'loggedin' in session and session.get('is_admin'):
-        cursor = get_db().cursor()
-
-        if request.method == 'POST':
-            titulo = request.form['titulo']
-            autor = request.form['autor']
-            genero = request.form['genero']
-            año_publicacion = request.form['año_publicacion']
-            descripcion = request.form['descripcion']
-            precio = request.form['precio']
-
-            cursor.execute('''
-                UPDATE catalogo 
-                SET titulo = ?, autor = ?, genero = ?, año_publicacion = ?, descripcion = ?, precio = ? 
-                WHERE id = ?
-            ''', (titulo, autor, genero, año_publicacion, descripcion, precio, libro_id))
-            get_db().commit()
-            flash('¡Libro actualizado exitosamente!')
-            return redirect(url_for('admin'))
-
-        cursor.execute('SELECT * FROM catalogo WHERE id = ?', (libro_id,))
-        libro = cursor.fetchone()
-        return render_template('editar_libro.html', libro=libro)
-    else:
+    if not es_admin():
         flash('No tienes permiso para acceder a esta página.')
         return redirect(url_for('registro'))
+    db = get_db()
+    libro = db.execute('SELECT * FROM catalogo WHERE id = ?', (libro_id,)).fetchone()
+    if libro is None:
+        flash('Ese libro no existe.')
+        return redirect(url_for('admin'))
+    if request.method == 'POST':
+        valores, error = datos_libro(request.form)
+        if error:
+            flash(error)
+            return render_template('editar_libro.html', libro=libro), 400
+        db.execute('''
+            UPDATE catalogo
+            SET titulo = ?, autor = ?, genero = ?, año_publicacion = ?, descripcion = ?, precio = ?
+            WHERE id = ?
+        ''', valores + (libro_id,))
+        db.commit()
+        flash('¡Libro actualizado exitosamente!')
+        return redirect(url_for('admin'))
+    return render_template('editar_libro.html', libro=libro)
 
 @app.route('/eliminar_libro/<int:libro_id>', methods=['POST'])
 def eliminar_libro(libro_id):
-    if 'loggedin' in session and session.get('is_admin'):
+    if es_admin():
         cursor = get_db().cursor()
         cursor.execute('DELETE FROM catalogo WHERE id = ?', (libro_id,))
         get_db().commit()
@@ -689,33 +739,43 @@ def ver_usuarios():
 
 @app.route('/editar_usuario/<int:user_id>', methods=['GET', 'POST'])
 def editar_usuario(user_id):
-    if 'loggedin' in session and session.get('is_admin'):
-        cursor = get_db().cursor()
-        
-        # Al hacer clic en el botón "Actualizar" en la página de edición
-        if request.method == 'POST' and 'username' in request.form and 'email' in request.form:
-            new_username = request.form['username']
-            new_email = request.form['email']
-            is_admin = bool(request.form.get('is_admin'))
-
-            cursor.execute("""
-                UPDATE users SET username = ?, email = ?, is_admin = ? WHERE id = ?
-            """, (new_username, new_email, is_admin, user_id))
-            get_db().commit()
-            flash('¡Usuario actualizado exitosamente!')
-            return redirect(url_for('admin', tab='usuarios'))
-
-        # Consulta de datos del usuario actual para mostrar en el formulario de edición
-        cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
-        usuario = cursor.fetchone()
-        return render_template('editar_usuario.html', usuario=usuario)
-    else:
+    if not es_admin():
         flash('No tienes permiso para realizar esta acción.')
         return redirect(url_for('registro'))
+    db = get_db()
+    usuario = db.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
+    if usuario is None:
+        flash('Ese usuario no existe.')
+        return redirect(url_for('admin', tab='usuarios'))
+
+    if request.method == 'POST':
+        new_username = request.form.get('username', '').strip()
+        new_email = request.form.get('email', '').strip()
+        is_admin = bool(request.form.get('is_admin'))
+        error = None
+        if not USUARIO_VALIDO.fullmatch(new_username):
+            error = 'El nombre de usuario debe tener entre 3 y 30 caracteres alfanuméricos'
+        elif not email_valido(new_email):
+            error = 'Correo electrónico inválido'
+        elif user_id == session['id'] and not is_admin:
+            error = 'No puedes quitarte a ti mismo el rol de administrador.'
+        elif db.execute('SELECT 1 FROM users WHERE (username = ? OR email = ?) AND id != ?',
+                        (new_username, new_email, user_id)).fetchone():
+            error = 'El nombre de usuario o correo ya están en uso por otra cuenta.'
+        if error:
+            flash(error)
+            return render_template('editar_usuario.html', usuario=usuario), 400
+        db.execute('UPDATE users SET username = ?, email = ?, is_admin = ? WHERE id = ?',
+                   (new_username, new_email, is_admin, user_id))
+        db.commit()
+        flash('¡Usuario actualizado exitosamente!')
+        return redirect(url_for('admin', tab='usuarios'))
+
+    return render_template('editar_usuario.html', usuario=usuario)
 
 @app.route('/eliminar_usuario/<int:user_id>', methods=['POST'])
 def eliminar_usuario(user_id):
-    if 'loggedin' in session and session.get('is_admin'):
+    if es_admin():
         if user_id == session['id']:
             flash('No puedes eliminar tu propia cuenta.')
             return redirect(url_for('admin', tab='usuarios'))
