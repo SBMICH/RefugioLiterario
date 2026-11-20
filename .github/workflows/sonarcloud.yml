@@ -23,7 +23,8 @@ jobs:
       - name: Instalar dependencias
         # Versiones exactas con hash (generadas con uv pip compile) y solo paquetes ya compilados:
         # así no se ejecutan scripts de instalación de terceros.
-        run: pip install --only-binary :all: --require-hashes -r requirements.txt -r requirements-dev.txt
+        # Entre comillas: en YAML, «:all: » sin comillas se confunde con un par clave: valor.
+        run: "pip install --only-binary :all: --require-hashes -r requirements.txt -r requirements-dev.txt"
       - name: Ejecutar pruebas con cobertura
         run: python -m pytest --cov=app --cov-report=xml --cov-report=term
       - name: Cache SonarQube packages
