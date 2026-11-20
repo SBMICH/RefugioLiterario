@@ -6,7 +6,7 @@ reseñas con estrellas, lista de deseos, libros más vendidos y panel de adminis
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=SBMICH_RefugioLiterario&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=SBMICH_RefugioLiterario)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=SBMICH_RefugioLiterario&metric=coverage)](https://sonarcloud.io/summary/new_code?id=SBMICH_RefugioLiterario)
 
-**Demo en vivo:** _(enlace de Render, pendiente)_ · puede tardar alrededor de un minuto en despertar si nadie la usó recientemente.
+**Demo en vivo: [refugio-literario.onrender.com](https://refugio-literario.onrender.com)** · puede tardar alrededor de un minuto en despertar si nadie la usó recientemente.
 
 ![Página de inicio](docs/img/inicio.png)
 

@@ -21,10 +21,9 @@ if os.environ.get('TRUST_PROXY') == '1':
 # Modo demostración (sitio público del portafolio): muestra cuentas de prueba en la página de acceso
 # e impide modificar o eliminar esas cuentas para que sigan funcionando para el siguiente visitante.
 MODO_DEMO = os.environ.get('DEMO_MODE') == '1'
-CUENTAS_DEMO = {
-    'admin': os.environ.get('ADMIN_PASSWORD', ''),
-    'ana': 'ana12345',
-}
+CUENTAS_DEMO = {'ana': 'ana12345'}
+if os.environ.get('ADMIN_PASSWORD'):  # sin ella, el admin tiene una clave aleatoria: no se muestra
+    CUENTAS_DEMO = {'admin': os.environ['ADMIN_PASSWORD'], **CUENTAS_DEMO}
 
 # Clave secreta para firmar las sesiones. Se toma de la variable de entorno SECRET_KEY;
 # si no existe, se genera una aleatoria y se guarda en .secret_key (no se sube a git).

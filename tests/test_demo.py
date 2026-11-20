@@ -29,3 +29,9 @@ def test_modo_demo_no_protege_cuentas_normales(demo, admin, db):
     lector_id = id_usuario(db, 'user2')
     admin.post(f'/eliminar_usuario/{lector_id}')
     assert db.execute('SELECT 1 FROM users WHERE id = ?', (lector_id,)).fetchone() is None
+
+
+def test_modo_demo_sin_clave_de_admin_no_la_muestra_vacia(demo, cliente, monkeypatch):
+    monkeypatch.setattr(app_module, 'CUENTAS_DEMO', {'ana': 'ana12345'})
+    pagina = cliente.texto('/registro')
+    assert '<code>ana</code>' in pagina and '<code>admin</code>' not in pagina
