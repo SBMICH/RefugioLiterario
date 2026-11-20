@@ -98,7 +98,7 @@
                     <td data-label="Título"><a href="{{ url_for('libro', libro_id=libro['id']) }}" class="plain-link"><strong>{{ libro['titulo'] }}</strong></a></td>
                     <td data-label="Autor">{{ libro['autor'] }}</td>
                     <td data-label="Ventas" class="num">{{ libro['ventas'] }}</td>
-                    <td data-label="Ingresos" class="num">{{ (libro['ventas'] * (libro['precio'] or 0)) | precio }}</td>
+                    <td data-label="Ingresos" class="num">{{ libro['ingresos'] | precio }}</td>
                 </tr>
                 {% else %}
                 <tr><td colspan="5" class="empty-row">Todavía no hay ventas.</td></tr>

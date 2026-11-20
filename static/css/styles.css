@@ -1039,3 +1039,15 @@ a.book { display: block; text-decoration: none; }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* Cuentas de prueba del sitio de demostración */
+.demo-box {
+    background: var(--paper-deep);
+    border: 1px dashed var(--line);
+    border-radius: var(--radius-sm);
+    padding: .85rem 1rem;
+    margin: 1rem 0;
+    font-size: .925rem;
+}
+.demo-box ul { margin: .4rem 0 .4rem 1.1rem; }
+.demo-box small { color: var(--ink-soft); }

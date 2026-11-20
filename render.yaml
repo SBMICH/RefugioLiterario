@@ -1,0 +1,25 @@
+# Despliegue en Render (https://render.com) como sitio de demostración.
+# En Render: New > Blueprint > elegir este repositorio. Pedirá el valor de ADMIN_PASSWORD.
+# La base de datos SQLite vive en el disco temporal del servicio: se reinicia en cada despliegue
+# o reinicio, y al arrancar se cargan de nuevo los datos de ejemplo.
+services:
+  - type: web
+    name: refugio-literario
+    runtime: python
+    plan: free
+    buildCommand: pip install --only-binary :all: --require-hashes -r requirements.txt
+    startCommand: python herramientas/datos_ejemplo.py && gunicorn --workers 1 --threads 4 --bind 0.0.0.0:$PORT app:app
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_PASSWORD     # contraseña del admin de la demo (se muestra en la página de acceso)
+        sync: false
+      - key: DEMO_MODE
+        value: "1"
+      - key: TRUST_PROXY
+        value: "1"
+      - key: SESSION_COOKIE_SECURE
+        value: "1"

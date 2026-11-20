@@ -23,17 +23,25 @@ PALABRAS = ('sombra luz río casa noche mar jardín memoria viento ciudad silenc
 GENEROS = ['Novela', 'Misterio', 'Fantasía', 'Ciencia ficción', 'Romance', 'Ensayo', 'Poesía', 'Historia']
 
 
+def elegir(opciones):
+    return secrets.choice(opciones)
+
+
+def entero(minimo, maximo, paso=1):
+    """Entero aleatorio entre minimo y maximo (ambos incluidos), en múltiplos de paso."""
+    return minimo + paso * secrets.randbelow((maximo - minimo) // paso + 1)
+
+
 def generar_datos(ruta, n_libros, n_compras, clave_admin):
     """Llena la copia con libros, usuarios, compras y reseñas falsos. Devuelve los ids de los libros."""
     from werkzeug.security import generate_password_hash
 
-    azar = secrets.SystemRandom()
     db = sqlite3.connect(ruta)
     db.executemany(
         'INSERT INTO catalogo (titulo, autor, genero, año_publicacion, descripcion, precio) VALUES (?, ?, ?, ?, ?, ?)',
-        [(f'El {azar.choice(PALABRAS)} de la {azar.choice(PALABRAS)} {i}', f'Autor de prueba {i % 900}',
-          azar.choice(GENEROS), azar.randint(1800, 2025), 'Libro generado para la prueba de carga.',
-          azar.randrange(20000, 90000, 1000)) for i in range(n_libros)])
+        [(f'El {elegir(PALABRAS)} de la {elegir(PALABRAS)} {i}', f'Autor de prueba {i % 900}',
+          elegir(GENEROS), entero(1800, 2025), 'Libro generado para la prueba de carga.',
+          entero(20000, 89000, 1000)) for i in range(n_libros)])
     # Administrador temporal con clave aleatoria, solo existe en la copia
     db.execute("INSERT INTO users (username, email, password, is_admin) VALUES ('admin_carga', 'admin@prueba.test', ?, 1)",
                (generate_password_hash(clave_admin),))
@@ -43,9 +51,9 @@ def generar_datos(ruta, n_libros, n_compras, clave_admin):
     usuarios = [r[0] for r in db.execute('SELECT id FROM users')]
     ahora = datetime.now()
     db.executemany('INSERT INTO compras (user_id, libro_id, fecha_compra) VALUES (?, ?, ?)',
-                   [(azar.choice(usuarios), azar.choice(libros), ahora - timedelta(minutes=i)) for i in range(n_compras)])
+                   [(elegir(usuarios), elegir(libros), ahora - timedelta(minutes=i)) for i in range(n_compras)])
     db.executemany('INSERT OR IGNORE INTO resenas (user_id, libro_id, calificacion, comentario, fecha) VALUES (?, ?, ?, ?, ?)',
-                   [(azar.choice(usuarios), azar.choice(libros), azar.randint(1, 5), 'Reseña de prueba', ahora)
+                   [(elegir(usuarios), elegir(libros), entero(1, 5), 'Reseña de prueba', ahora)
                     for _ in range(n_compras // 5)])
     db.commit()
     db.close()
@@ -71,15 +79,20 @@ def main():
     n_compras = int(sys.argv[2]) if len(sys.argv) > 2 else 50_000
 
     copia = os.path.join(tempfile.mkdtemp(), 'carga.db')
-    shutil.copy(os.path.join(RAIZ, 'libreria.db'), copia)
+    original = os.path.join(RAIZ, 'libreria.db')
+    if os.path.exists(original):
+        shutil.copy(original, copia)  # si no existe, la app crea una base nueva en la copia
     os.environ['DATABASE_PATH'] = copia
     sys.path.insert(0, RAIZ)
-    from app import app  # importar después de fijar DATABASE_PATH
+    from app import app, actualizar_esquema  # importar después de fijar DATABASE_PATH
 
     print(f'Generando {n_libros:,} libros, {N_USUARIOS:,} usuarios y {n_compras:,} compras…')
     inicio = time.perf_counter()
     clave_admin = secrets.token_urlsafe(16)
     libros = generar_datos(copia, n_libros, n_compras, clave_admin)
+    db = sqlite3.connect(copia)
+    actualizar_esquema(db)  # completa título y precio de las compras generadas
+    db.close()
     print(f'Datos creados en {time.perf_counter() - inicio:.1f} s\n')
 
     cliente = app.test_client()

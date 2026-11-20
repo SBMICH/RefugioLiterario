@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g
 from flask_wtf.csrf import CSRFProtect, CSRFError
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 from urllib.parse import urlparse
@@ -11,6 +12,19 @@ import sqlite3
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__)
+
+# Detrás de un proxy (Render, Railway...) la IP real llega en X-Forwarded-For. Sin esto, el límite de
+# intentos de inicio de sesión vería a todos los visitantes con la IP del proxy y los bloquearía juntos.
+if os.environ.get('TRUST_PROXY') == '1':
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
+# Modo demostración (sitio público del portafolio): muestra cuentas de prueba en la página de acceso
+# e impide modificar o eliminar esas cuentas para que sigan funcionando para el siguiente visitante.
+MODO_DEMO = os.environ.get('DEMO_MODE') == '1'
+CUENTAS_DEMO = {
+    'admin': os.environ.get('ADMIN_PASSWORD', ''),
+    'ana': 'ana12345',
+}
 
 # Clave secreta para firmar las sesiones. Se toma de la variable de entorno SECRET_KEY;
 # si no existe, se genera una aleatoria y se guarda en .secret_key (no se sube a git).
@@ -32,7 +46,6 @@ MAX_INTENTOS = 5
 BLOQUEO = timedelta(minutes=15)
 intentos_fallidos = {}  # ip -> (cantidad, fecha del primer fallo)
 
-# Ruta del archivo de base de datos SQLite
 # Cookies de sesión más seguras
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
@@ -78,9 +91,23 @@ def init_db():
     db.close()
 
 def actualizar_esquema(db):
-    """Crea las tablas e índices nuevos si la base de datos es anterior a ellos."""
+    """Crea las tablas, columnas e índices nuevos si la base de datos es anterior a ellos."""
     with open(MIGRACIONES, encoding='utf-8') as f:
         db.executescript(f.read())
+    # Las compras guardan título, autor y precio del momento de la compra, para que el historial
+    # y los ingresos no cambien si después se edita o se elimina el libro.
+    columnas = {fila[1] for fila in db.execute('PRAGMA table_info(compras)')}
+    for columna, tipo in (('titulo', 'TEXT'), ('autor', 'TEXT'), ('precio', 'INTEGER')):
+        if columna not in columnas:
+            db.execute(f'ALTER TABLE compras ADD COLUMN {columna} {tipo}')
+    db.execute('''
+        UPDATE compras SET
+            titulo = COALESCE(titulo, (SELECT titulo FROM catalogo WHERE id = compras.libro_id)),
+            autor = COALESCE(autor, (SELECT autor FROM catalogo WHERE id = compras.libro_id)),
+            precio = COALESCE(precio, (SELECT precio FROM catalogo WHERE id = compras.libro_id))
+        WHERE titulo IS NULL OR autor IS NULL OR precio IS NULL
+    ''')
+    db.commit()
 
 @app.cli.command('init-db')
 def init_db_command():
@@ -119,6 +146,17 @@ def formato_fecha(valor):
 
 def es_admin():
     return 'loggedin' in session and bool(session.get('is_admin'))
+
+@app.context_processor
+def datos_demo():
+    return {'modo_demo': MODO_DEMO, 'cuentas_demo': CUENTAS_DEMO if MODO_DEMO else {}}
+
+def es_cuenta_demo(user_id):
+    """En modo demo, las cuentas de prueba no se pueden modificar ni eliminar."""
+    if not MODO_DEMO:
+        return False
+    fila = get_db().execute('SELECT username FROM users WHERE id = ?', (user_id,)).fetchone()
+    return fila is not None and fila['username'] in CUENTAS_DEMO
 
 def volver(por_defecto):
     """Redirige a la página anterior solo si es de este mismo sitio (evita redirecciones abiertas)."""
@@ -168,7 +206,7 @@ def datos_libro(formulario):
     try:
         anio = int(formulario.get('año_publicacion', ''))
         precio = int(float(formulario.get('precio', '')))
-    except ValueError:
+    except (ValueError, OverflowError):  # OverflowError: valores como 'inf'
         return None, 'El año y el precio deben ser números.'
     if not -3000 <= anio <= datetime.now().year + 1:
         return None, 'El año de publicación no es válido.'
@@ -178,13 +216,16 @@ def datos_libro(formulario):
 
 if not os.path.exists(DATABASE):
     init_db()
-with sqlite3.connect(DATABASE) as _db:
+_db = sqlite3.connect(DATABASE)  # «with sqlite3.connect» no cierra la conexión, solo confirma la transacción
+try:
     actualizar_esquema(_db)
+finally:
+    _db.close()
 
 # ---------- Consultas compartidas ----------
 def mas_vendidos(limite=8):
     return get_db().execute('''
-        SELECT ca.*, COUNT(c.id) AS ventas
+        SELECT ca.*, COUNT(c.id) AS ventas, COALESCE(SUM(c.precio), 0) AS ingresos
         FROM compras c JOIN catalogo ca ON ca.id = c.libro_id
         GROUP BY ca.id
         ORDER BY ventas DESC, ca.titulo
@@ -232,7 +273,7 @@ def index():
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
     if 'loggedin' in session:
-        return redirect(url_for('index'))  # Asegúrate de redirigir con page_num
+        return redirect(url_for('index'))
 
     if request.method == 'POST' and 'new-username' in request.form and 'email' in request.form and 'new-password' in request.form:
         username = request.form['new-username']
@@ -261,7 +302,7 @@ def registro():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if 'loggedin' in session:
-        return redirect(url_for('index'))  # Asegúrate de redirigir con page_num
+        return redirect(url_for('index'))
 
     if request.method == 'POST' and 'username' in request.form and 'password' in request.form:
         username = request.form['username']
@@ -290,7 +331,7 @@ def login():
                 session['username'] = cuenta[1]
                 session['is_admin'] = cuenta[4]  # Guardar si es admin
                 flash('¡Inicio de sesión exitoso!')
-                return redirect(url_for('catalogo', page_num=1))  # Asegúrate de redirigir con page_num
+                return redirect(url_for('catalogo', page_num=1))
         if not cuenta or not check_password_hash(cuenta[3], password):
             intentos_fallidos[ip] = (fallos + 1, desde if fallos else ahora)
             restantes = MAX_INTENTOS - fallos - 1
@@ -515,22 +556,21 @@ def finalizar_compra():
         cursor = get_db().cursor()
 
         if request.method == 'POST':
-            # Obtener todos los libros del carrito del usuario
-            cursor.execute('SELECT libro_id, precio FROM carrito WHERE user_id = ?', (user_id,))
+            # Libros del carrito con los datos que se guardan en el historial
+            cursor.execute('''
+                SELECT c.libro_id, ca.titulo, ca.autor, c.precio
+                FROM carrito c JOIN catalogo ca ON ca.id = c.libro_id WHERE c.user_id = ?
+            ''', (user_id,))
             libros_carrito = cursor.fetchall()
 
             if libros_carrito:
-                # Registrar cada compra en la tabla compras
-                for libro in libros_carrito:
-                    libro_id, precio = libro
-                    fecha_compra = datetime.now()
+                fecha_compra = datetime.now()
+                cursor.executemany('''
+                    INSERT INTO compras (user_id, libro_id, titulo, autor, precio, fecha_compra)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', [(user_id, l['libro_id'], l['titulo'], l['autor'], l['precio'], fecha_compra)
+                      for l in libros_carrito])
 
-                    # Insertar la compra en la tabla compras
-                    cursor.execute('''
-                        INSERT INTO compras (user_id, libro_id, fecha_compra) 
-                        VALUES (?, ?, ?)
-                    ''', (user_id, libro_id, fecha_compra))
-                
                 # Limpiar el carrito después de la compra
                 cursor.execute('DELETE FROM carrito WHERE user_id = ?', (user_id,))
                 get_db().commit()
@@ -570,9 +610,8 @@ def usuario():
 
         # Obtener los libros comprados por el usuario
         cursor.execute('''
-            SELECT ca.titulo, ca.autor, ca.precio, c.fecha_compra 
-            FROM compras c 
-            JOIN catalogo ca ON c.libro_id = ca.id 
+            SELECT c.titulo, c.autor, c.precio, c.fecha_compra
+            FROM compras c
             WHERE c.user_id = ?
             ORDER BY c.fecha_compra DESC
         ''', (session['id'],))
@@ -593,6 +632,9 @@ def usuario():
 @app.route('/editar_perfil', methods=['POST'])
 def editar_perfil():
     if 'loggedin' in session:
+        if es_cuenta_demo(session['id']):
+            flash('Las cuentas de demostración no se pueden modificar. Crea tu propia cuenta para probarlo.')
+            return redirect(url_for('usuario'))
         nuevo_username = request.form.get('username')
         nuevo_email = request.form.get('email')
 
@@ -706,7 +748,7 @@ def admin():
         'libros': db.execute('SELECT COUNT(*) FROM catalogo').fetchone()[0],
         'usuarios': db.execute('SELECT COUNT(*) FROM users').fetchone()[0],
         'compras': db.execute('SELECT COUNT(*) FROM compras').fetchone()[0],
-        'ingresos': db.execute('SELECT COALESCE(SUM(ca.precio), 0) FROM compras c JOIN catalogo ca ON ca.id = c.libro_id').fetchone()[0],
+        'ingresos': db.execute('SELECT COALESCE(SUM(precio), 0) FROM compras').fetchone()[0],
     }
     filas, total = [], 0
     if tab == 'usuarios':
@@ -749,6 +791,9 @@ def editar_usuario(user_id):
         return redirect(url_for('admin', tab='usuarios'))
 
     if request.method == 'POST':
+        if es_cuenta_demo(user_id):
+            flash('Las cuentas de demostración no se pueden modificar.')
+            return redirect(url_for('admin', tab='usuarios'))
         new_username = request.form.get('username', '').strip()
         new_email = request.form.get('email', '').strip()
         is_admin = bool(request.form.get('is_admin'))
@@ -778,6 +823,9 @@ def eliminar_usuario(user_id):
     if es_admin():
         if user_id == session['id']:
             flash('No puedes eliminar tu propia cuenta.')
+            return redirect(url_for('admin', tab='usuarios'))
+        if es_cuenta_demo(user_id):
+            flash('Las cuentas de demostración no se pueden eliminar.')
             return redirect(url_for('admin', tab='usuarios'))
         cursor = get_db().cursor()
         cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))

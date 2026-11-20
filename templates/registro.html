@@ -11,6 +11,18 @@
             <div id="login-form" class="auth-form">
                 <h1>Bienvenido de nuevo</h1>
                 <p class="muted">Inicia sesión para explorar el catálogo.</p>
+                {% if modo_demo %}
+                <div class="demo-box">
+                    <strong>Sitio de demostración</strong>
+                    <p>Puedes entrar con estas cuentas o crear la tuya:</p>
+                    <ul>
+                        {% for usuario, clave in cuentas_demo.items() %}
+                        <li><code>{{ usuario }}</code> / <code>{{ clave }}</code>{% if usuario == 'admin' %} (administrador){% else %} (lector){% endif %}</li>
+                        {% endfor %}
+                    </ul>
+                    <small>Los datos se reinician cada cierto tiempo. No uses contraseñas reales.</small>
+                </div>
+                {% endif %}
                 <form action="{{ url_for('login') }}" method="post">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="form-group">

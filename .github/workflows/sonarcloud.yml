@@ -21,7 +21,9 @@ jobs:
           python-version: '3.12'
           cache: pip
       - name: Instalar dependencias
-        run: pip install -r requirements.txt -r requirements-dev.txt
+        # Versiones exactas con hash (generadas con uv pip compile) y solo paquetes ya compilados:
+        # así no se ejecutan scripts de instalación de terceros.
+        run: pip install --only-binary :all: --require-hashes -r requirements.txt -r requirements-dev.txt
       - name: Ejecutar pruebas con cobertura
         run: python -m pytest --cov=app --cov-report=xml --cov-report=term
       - name: Cache SonarQube packages
